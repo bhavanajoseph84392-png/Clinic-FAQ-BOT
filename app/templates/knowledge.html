@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Knowledge Base - {{ clinic.name }}{% endblock %}
+{% block header_title %}Knowledge Base Management{% endblock %}
+
+{% block content %}
+<!-- Upload & Add Forms -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+  <!-- Add Text / QA Item -->
+  <div class="card">
+    <h3 class="card-title">Add Text Knowledge</h3>
+    <form method="POST" action="/admin/knowledge/text">
+      <div class="form-group">
+        <label class="form-label" for="title">Title</label>
+        <input type="text" id="title" name="title" class="form-control" placeholder="e.g. Clinic Hours and Holiday Schedule" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="body">Content / Body</label>
+        <textarea id="body" name="body" class="form-control" rows="5" placeholder="Enter clear clinic facts, schedules, services or directions..." required></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Save and Process</button>
+    </form>
+  </div>
+
+  <!-- Upload Document / Price List -->
+  <div class="card">
+    <h3 class="card-title">Upload Document or Price List</h3>
+    <form method="POST" action="/admin/knowledge/upload" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="form-label" for="upload_type">Document Type</label>
+        <select id="upload_type" name="type" class="form-control" required>
+          <option value="pdf">PDF Document (up to 10MB)</option>
+          <option value="price_list">Price List (CSV or plain text)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="doc_title">Title</label>
+        <input type="text" id="doc_title" name="title" class="form-control" placeholder="e.g. 2026 Consultation & Lab Fee Schedule" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="file">Select File</label>
+        <input type="file" id="file" name="file" class="form-control" accept=".pdf,.csv,.txt" required>
+        <small style="color: var(--slate-500); display: block; margin-top: 0.25rem;">Max file size: 10 MB. Scanned image PDFs are rejected.</small>
+      </div>
+      <button type="submit" class="btn btn-primary">Upload and Process</button>
+    </form>
+  </div>
+</div>
+
+<!-- Existing Knowledge Table -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Approved Clinic Knowledge Items</h3>
+    <span style="font-size: 0.85rem; color: var(--slate-500);">All items are processed into 768-dim vector embeddings</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Last Updated</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if items %}
+          {% for item in items %}
+          <tr>
+            <td style="font-weight: 600;">
+              {{ item.title }}
+              {% if item.error_message %}
+              <div style="font-size: 0.75rem; color: var(--danger); font-weight: normal; margin-top: 0.2rem;">
+                Error: {{ item.error_message }}
+              </div>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge" style="background: var(--slate-100); color: var(--slate-700);">{{ item.type }}</span>
+            </td>
+            <td>
+              <span class="badge badge-{{ item.status }}">{{ item.status }}</span>
+            </td>
+            <td style="color: var(--slate-500); font-size: 0.85rem;">{{ item.updated_at }}</td>
+            <td style="text-align: right;">
+              <button onclick="document.getElementById('edit-modal-{{ item.id }}').style.display='block'" class="btn btn-secondary btn-sm">Edit</button>
+              <form method="POST" action="/admin/knowledge/{{ item.id }}/delete" style="display: inline-block;" onsubmit="return confirm('Delete this knowledge item and its chunks?');">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+              </form>
+            </td>
+          </tr>
+
+          <!-- Edit Modal -->
+          <div id="edit-modal-{{ item.id }}" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center;">
+            <div style="background: white; max-width: 600px; width: 90%; margin: 5% auto; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+              <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">Edit Knowledge Item</h3>
+              <form method="POST" action="/admin/knowledge/{{ item.id }}/edit">
+                <div class="form-group">
+                  <label class="form-label">Title</label>
+                  <input type="text" name="title" class="form-control" value="{{ item.title }}" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Body Content</label>
+                  <textarea name="body" class="form-control" rows="8" required>{{ item.body or '' }}</textarea>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                  <button type="button" onclick="document.getElementById('edit-modal-{{ item.id }}').style.display='none'" class="btn btn-secondary">Cancel</button>
+                  <button type="submit" class="btn btn-primary">Save & Re-embed</button>
+                </div>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--slate-400); padding: 2rem;">
+              No knowledge items uploaded yet. Add text or upload a document to get started.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

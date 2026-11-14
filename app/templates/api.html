@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}API Keys & Webhooks - {{ clinic.name }}{% endblock %}
+{% block header_title %}API Keys & Webhook Integrations{% endblock %}
+
+{% block content %}
+<!-- Alert for Newly Created Key (Shown Once) -->
+{% if newly_created_key %}
+<div class="card" style="background: var(--warning-bg); border: 2px solid var(--warning); padding: 1.5rem;">
+  <h4 style="color: var(--warning); font-size: 1.1rem; font-weight: 700;">Important: Copy Your API Key Now</h4>
+  <p style="font-size: 0.9rem; color: var(--slate-700); margin: 0.5rem 0 1rem;">
+    This secret key will <strong>never be shown again</strong>. Store it securely in your external system or integration.
+  </p>
+  <div style="display: flex; gap: 0.5rem; align-items: center;">
+    <input type="text" readonly value="{{ newly_created_key }}" id="newKeyVal" class="form-control" style="font-family: monospace; font-weight: 700; background: white;">
+    <button onclick="navigator.clipboard.writeText(document.getElementById('newKeyVal').value); alert('API Key copied!');" class="btn btn-primary">Copy</button>
+  </div>
+</div>
+{% endif %}
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+  <!-- Create Key Card -->
+  <div class="card">
+    <h3 class="card-title">Generate New API Key</h3>
+    <p style="font-size: 0.85rem; color: var(--slate-500); margin-bottom: 1rem;">Keys authenticate requests to <code>/api/v1/ask</code> and <code>/api/v1/questions</code>.</p>
+    <form method="POST" action="/admin/api/keys">
+      <div class="form-group">
+        <label class="form-label" for="key_name">Key Description / Name</label>
+        <input type="text" id="key_name" name="name" class="form-control" placeholder="e.g. Website Integration Key" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Generate API Key</button>
+    </form>
+  </div>
+
+  <!-- Webhook Configuration Card -->
+  <div class="card">
+    <h3 class="card-title">Webhook Settings</h3>
+    <p style="font-size: 0.85rem; color: var(--slate-500); margin-bottom: 1rem;">Receive an event when staff answers an escalated pending question.</p>
+    <form method="POST" action="/admin/api/webhook">
+      <div class="form-group">
+        <label class="form-label" for="webhook_url">Webhook Destination URL</label>
+        <input type="url" id="webhook_url" name="webhook_url" class="form-control" placeholder="https://api.yourclinic.com/webhooks/faq" value="{{ clinic.webhook_url or '' }}">
+        <small style="color: var(--slate-500); display: block; margin-top: 0.25rem;">Private/localhost IPs are blocked for security.</small>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="webhook_secret">Signing Secret (HMAC-SHA256)</label>
+        <input type="text" id="webhook_secret" name="webhook_secret" class="form-control" placeholder="Optional secret for X-Signature header" value="{{ clinic.webhook_secret or '' }}">
+      </div>
+      <button type="submit" class="btn btn-primary">Save Webhook Settings</button>
+    </form>
+  </div>
+</div>
+
+<!-- Active Keys List -->
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Active API Keys</h3>
+    <span style="font-size: 0.85rem; color: var(--slate-500);">All keys default to 60 requests / minute rate limit</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Key Prefix</th>
+          <th>Rate Limit</th>
+          <th>Created</th>
+          <th>Last Used</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if keys %}
+          {% for k in keys %}
+          <tr>
+            <td style="font-weight: 600;">{{ k.name }}</td>
+            <td><code>{{ k.key_prefix }}••••••••</code></td>
+            <td>{{ k.rate_limit_per_min }} req/min</td>
+            <td style="font-size: 0.85rem; color: var(--slate-500);">{{ k.created_at }}</td>
+            <td style="font-size: 0.85rem; color: var(--slate-500);">{{ k.last_used_at or 'Never' }}</td>
+            <td style="text-align: right;">
+              <form method="POST" action="/admin/api/keys/{{ k.id }}/delete" onsubmit="return confirm('Revoke this key immediately?');">
+                <button type="submit" class="btn btn-danger btn-sm">Revoke Key</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" style="text-align: center; color: var(--slate-400); padding: 2rem;">
+              No API keys created yet. Generate one above to access REST API endpoints.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

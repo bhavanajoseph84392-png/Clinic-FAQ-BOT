@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login - Clinic FAQ Bot</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body style="background: var(--slate-50); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem;">
+  <div style="max-width: 420px; width: 100%; background: #ffffff; border-radius: 0.75rem; border: 1px solid var(--slate-200); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 2.25rem;">
+    <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--slate-900); margin-bottom: 0.5rem;">Clinic Admin Login</h2>
+    <p style="font-size: 0.875rem; color: var(--slate-500); margin-bottom: 1.75rem;">Sign in to access your clinic dashboard and knowledge base.</p>
+
+    {% if error %}
+    <div style="background: var(--danger-bg); border: 1px solid #fecaca; color: var(--danger); padding: 0.75rem; border-radius: 0.5rem; font-size: 0.875rem; margin-bottom: 1.25rem;">
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/login">
+      <div class="form-group">
+        <label class="form-label" for="email">Admin Email</label>
+        <input type="email" id="email" name="email" class="form-control" placeholder="admin@sunriseclinic.com" required autofocus>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••••••" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem; padding: 0.75rem;">Log In</button>
+    </form>
+
+    <div style="margin-top: 1.5rem; text-align: center; font-size: 0.875rem; color: var(--slate-500);">
+      Don't have a clinic account? <a href="/signup" style="font-weight: 600;">Register here</a>
+    </div>
+  </div>
+</body>
+</html>

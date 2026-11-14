@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Answers & Ratings - {{ clinic.name }}{% endblock %}
+{% block header_title %}Answers, Feedback & "Ask Again"{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Recent Chatbot Answers & Admin Evaluation</h3>
+    <span style="font-size: 0.85rem; color: var(--slate-500);">Rate answers to create lessons and test improvements side-by-side</span>
+  </div>
+
+  {% if side_by_side %}
+  <!-- Ask Again Side-by-Side Comparison Modal / Box -->
+  <div style="background: var(--slate-100); border: 2px solid var(--primary); border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--slate-900);">"Ask This Question Again" Comparison</h4>
+      <a href="/admin/answers" class="btn btn-secondary btn-sm">Close Comparison</a>
+    </div>
+    <div style="font-size: 0.95rem; margin-bottom: 1rem;">
+      <strong>Question:</strong> <em>"{{ side_by_side.question }}"</em>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <!-- Old Answer -->
+      <div style="background: white; border: 1px solid var(--slate-300); border-radius: 0.5rem; padding: 1rem;">
+        <span class="badge badge-bad" style="margin-bottom: 0.5rem;">Previous Answer</span>
+        <p style="font-size: 0.95rem; color: var(--slate-800); margin-top: 0.5rem;">{{ side_by_side.old_answer.text }}</p>
+        <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 0.5rem;">Source: {{ side_by_side.old_answer.source_title or 'None' }}</div>
+      </div>
+      <!-- New Answer -->
+      <div style="background: var(--primary-light); border: 1px solid var(--primary-border); border-radius: 0.5rem; padding: 1rem;">
+        <span class="badge badge-good" style="margin-bottom: 0.5rem;">New Re-evaluated Answer</span>
+        <p style="font-size: 0.95rem; color: var(--slate-900); font-weight: 500; margin-top: 0.5rem;">{{ side_by_side.new_answer.text }}</p>
+        <div style="font-size: 0.75rem; color: var(--primary-hover); margin-top: 0.5rem;">
+          Source: {{ side_by_side.new_answer.source_title }} 
+          {% if side_by_side.new_answer.lesson_used %}
+          &bull; <strong>(Approved Lesson Contributed!)</strong>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1rem;">
+    {% if answers %}
+      {% for item in answers %}
+      <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 0.75rem; padding: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+          <div>
+            <strong style="font-size: 0.85rem; color: var(--slate-500); text-transform: uppercase;">Patient Question:</strong>
+            <div style="font-size: 1rem; font-weight: 600; color: var(--slate-900); margin-top: 0.2rem;">{{ item.question_text }}</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span class="badge" style="background: var(--slate-200); color: var(--slate-700);">Kind: {{ item.kind }}</span>
+            {% if item.rating %}
+              <span class="badge badge-{{ item.rating }}">{{ item.rating }} rating</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div style="background: #ffffff; border: 1px solid var(--slate-200); border-radius: 0.5rem; padding: 1rem; margin-bottom: 0.75rem;">
+          <strong style="color: var(--slate-500); font-size: 0.8rem; text-transform: uppercase;">Chatbot Answer:</strong>
+          <p style="font-size: 0.95rem; color: var(--slate-800); margin-top: 0.25rem;">{{ item.text }}</p>
+          <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 0.5rem;">
+            Source: <strong>{{ item.source_title or 'None' }}</strong> &bull; Generated: {{ item.created_at }}
+          </div>
+        </div>
+
+        <!-- Rating & Ask Again Actions -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <!-- Good rating button -->
+            <form method="POST" action="/admin/answers/{{ item.id }}/rating" style="display: inline;">
+              <input type="hidden" name="value" value="good">
+              <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--success); font-weight: 600;">
+                &check; Good
+              </button>
+            </form>
+
+            <!-- Bad rating toggle -->
+            <button onclick="document.getElementById('bad-form-{{ item.id }}').style.display = (document.getElementById('bad-form-{{ item.id }}').style.display === 'none' ? 'block' : 'none')" class="btn btn-secondary btn-sm" style="color: var(--danger); font-weight: 600;">
+              &times; Bad (Add Correction)
+            </button>
+          </div>
+
+          <!-- Ask this question again -->
+          <form method="POST" action="/admin/answers/{{ item.id }}/ask-again">
+            <button type="submit" class="btn btn-primary btn-sm">
+              Ask This Question Again &rarr;
+            </button>
+          </form>
+        </div>
+
+        <!-- Hidden Bad Correction Form -->
+        <div id="bad-form-{{ item.id }}" style="display: none; margin-top: 1rem; background: var(--danger-bg); border: 1px solid #fecaca; border-radius: 0.5rem; padding: 1rem;">
+          <h5 style="font-weight: 700; color: var(--danger); font-size: 0.9rem; margin-bottom: 0.5rem;">Create Lesson from Bad Answer</h5>
+          <form method="POST" action="/admin/answers/{{ item.id }}/rating">
+            <input type="hidden" name="value" value="bad">
+            <div class="form-group" style="margin-bottom: 0.75rem;">
+              <label class="form-label" style="font-size: 0.8rem;">Correct Answer (used directly for future matching questions):</label>
+              <textarea name="correct_answer" class="form-control" rows="2" placeholder="e.g. Yes, Dr. Sarah Jenkins is available on Tuesdays and Thursdays from 9am to 2pm."></textarea>
+            </div>
+            <div class="form-group" style="margin-bottom: 0.75rem;">
+              <label class="form-label" style="font-size: 0.8rem;">Or Explanatory Comment (hint for answer model):</label>
+              <input type="text" name="comment" class="form-control" placeholder="e.g. Remember to mention parking is free at the back.">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+              <button type="button" onclick="document.getElementById('bad-form-{{ item.id }}').style.display='none'" class="btn btn-secondary btn-sm">Cancel</button>
+              <button type="submit" class="btn btn-danger btn-sm">Save Correction as Lesson</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="text-align: center; padding: 3rem; color: var(--slate-400);">
+        No answers recorded yet. Patients will interact through your public link.
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

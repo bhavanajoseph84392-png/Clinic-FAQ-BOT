@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clinic FAQ Bot - Multi-Tenant AI Patient Assistant</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body style="background: linear-gradient(135deg, #f0fdfa 0%, #e2e8f0 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem;">
+  <div style="max-width: 650px; background: #ffffff; border-radius: 1rem; border: 1px solid var(--slate-200); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08); padding: 3rem; text-align: center;">
+    <div style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; background: var(--primary-light); color: var(--primary); border-radius: 1rem; margin-bottom: 1.5rem;">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M2 12h20"/></svg>
+    </div>
+    <h1 style="font-size: 2.25rem; font-weight: 800; color: var(--slate-900); margin-bottom: 0.75rem;">Clinic FAQ Bot</h1>
+    <p style="font-size: 1.1rem; color: var(--slate-600); margin-bottom: 2rem; line-height: 1.6;">
+      Multi-tenant, privacy-first AI patient FAQ assistant. Securely isolated knowledge bases, grounded RAG responses, zero medical hallucination, and lesson-based continuous improvement.
+    </p>
+
+    <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 2.5rem;">
+      <a href="/signup" class="btn btn-primary" style="padding: 0.75rem 1.75rem; font-size: 1rem;">Register Clinic</a>
+      <a href="/login" class="btn btn-secondary" style="padding: 0.75rem 1.75rem; font-size: 1rem;">Admin Login</a>
+    </div>
+
+    <div style="border-top: 1px solid var(--slate-200); padding-top: 1.5rem; text-align: left; font-size: 0.85rem; color: var(--slate-500);">
+      <strong>Enterprise Architecture Features:</strong>
+      <ul style="margin-top: 0.5rem; padding-left: 1.25rem; line-height: 1.8;">
+        <li>Strict PostgreSQL Row-Level Security (RLS) tenant isolation</li>
+        <li>Hybrid pgvector semantic search + full-text search</li>
+        <li>Automatic fallback escalation to clinic staff with email delivery</li>
+        <li>Lesson-based improvement system (no automatic model retraining)</li>
+        <li>API keys with SHA-256 storage, per-minute rate limiting & signed webhooks</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

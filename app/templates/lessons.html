@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Lessons Management - {{ clinic.name }}{% endblock %}
+{% block header_title %}Lesson-Based Continuous Improvement{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h3 class="card-title">Approved Clinic Lessons</h3>
+      <p style="font-size: 0.85rem; color: var(--slate-500); margin-top: 0.2rem;">
+        Lessons take precedence over ordinary knowledge. Enabled lessons directly answer matching questions without model retraining.
+      </p>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Original Question</th>
+          <th>Correction / Hint</th>
+          <th>Times Used</th>
+          <th>Status</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if lessons %}
+          {% for l in lessons %}
+          <tr>
+            <td style="font-weight: 600; max-width: 250px;">{{ l.question_text }}</td>
+            <td style="max-width: 320px;">
+              {% if l.correct_answer %}
+              <div style="font-size: 0.875rem; color: var(--slate-800);">
+                <strong style="color: var(--success); font-size: 0.75rem; text-transform: uppercase;">Correct Answer:</strong> {{ l.correct_answer }}
+              </div>
+              {% endif %}
+              {% if l.comment %}
+              <div style="font-size: 0.825rem; color: var(--slate-500); margin-top: 0.2rem;">
+                <strong style="font-size: 0.75rem; text-transform: uppercase;">Hint:</strong> {{ l.comment }}
+              </div>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge" style="background: var(--primary-light); color: var(--primary); font-size: 0.85rem;">{{ l.times_used }} times</span>
+            </td>
+            <td>
+              <form method="POST" action="/admin/lessons/{{ l.id }}/toggle" style="display: inline;">
+                <input type="hidden" name="enabled" value="{{ 'false' if l.enabled else 'true' }}">
+                <button type="submit" class="badge {{ 'badge-ready' if l.enabled else 'badge-queued' }}" style="cursor: pointer; border: none;">
+                  {{ 'Enabled' if l.enabled else 'Disabled' }}
+                </button>
+              </form>
+            </td>
+            <td style="text-align: right;">
+              <form method="POST" action="/admin/lessons/{{ l.id }}/delete" style="display: inline;" onsubmit="return confirm('Delete this lesson permanently?');">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--slate-400); padding: 3rem;">
+              No lessons created yet. Lessons are created when clinic admins rate chatbot answers as "Bad" with a verified correction.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Weekly Analytics - {{ clinic.name }}{% endblock %}
+{% block header_title %}Weekly Quality & Improvement Analytics{% endblock %}
+
+{% block content %}
+<!-- Overview KPI Cards -->
+<div class="grid-cols-4">
+  <div class="stat-card" style="border-top: 4px solid var(--success);">
+    <div class="stat-label">Total Good Ratings</div>
+    <div class="stat-value" style="color: var(--success);">{{ analytics.summary.total_good }}</div>
+  </div>
+  <div class="stat-card" style="border-top: 4px solid var(--danger);">
+    <div class="stat-label">Total Bad Ratings</div>
+    <div class="stat-value" style="color: var(--danger);">{{ analytics.summary.total_bad }}</div>
+  </div>
+  <div class="stat-card" style="border-top: 4px solid var(--primary);">
+    <div class="stat-label">Lessons In System</div>
+    <div class="stat-value" style="color: var(--primary);">{{ analytics.summary.total_lessons }}</div>
+  </div>
+  <div class="stat-card" style="border-top: 4px solid var(--accent);">
+    <div class="stat-label">Lesson-Driven Answers</div>
+    <div class="stat-value" style="color: var(--accent);">{{ analytics.summary.total_lessons_used }}</div>
+  </div>
+</div>
+
+<!-- Charts Section -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+  <!-- Good vs Bad Ratings Bar Chart -->
+  <div class="card">
+    <h3 class="card-title">Weekly Ratings (Good vs. Bad)</h3>
+    <p style="font-size: 0.85rem; color: var(--slate-500); margin-bottom: 1rem;">Tracks satisfaction trends across patient answers</p>
+    <div style="height: 280px;">
+      <canvas id="ratingsChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Improvement Trend Line Chart -->
+  <div class="card">
+    <h3 class="card-title">Quality Improvement Trend (% Good Share)</h3>
+    <p style="font-size: 0.85rem; color: var(--slate-500); margin-bottom: 1rem;">Good / (Good + Bad) ratio demonstrating lesson-based gains</p>
+    <div style="height: 280px;">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Weekly Breakdown Table -->
+<div class="card">
+  <h3 class="card-title">Weekly Data Breakdown</h3>
+  <div class="table-responsive" style="margin-top: 1rem;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Week</th>
+          <th>Good Answers</th>
+          <th>Bad Answers</th>
+          <th>Lessons Triggered</th>
+          <th>Quality Share (% Good)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if analytics.weekly_data %}
+          {% for w in analytics.weekly_data %}
+          <tr>
+            <td style="font-weight: 600;">{{ w.week }}</td>
+            <td style="color: var(--success); font-weight: 600;">+{{ w.good }}</td>
+            <td style="color: var(--danger); font-weight: 600;">{{ w.bad }}</td>
+            <td><span class="badge" style="background: var(--primary-light); color: var(--primary);">{{ w.lessons_used }}</span></td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="flex-grow: 1; background: var(--slate-200); height: 8px; border-radius: 4px; overflow: hidden; max-width: 100px;">
+                  <div style="background: var(--primary); width: {{ w.good_share_pct }}%; height: 100%;"></div>
+                </div>
+                <span style="font-size: 0.85rem; font-weight: 600;">{{ w.good_share_pct }}%</span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--slate-400); padding: 2rem;">
+              No rating activity recorded yet. Run `python scripts/seed_demo.py` to seed multi-week demonstration data.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const weeklyData = {{ analytics.weekly_data | tojson }};
+  const labels = weeklyData.map(d => d.week);
+  const goodData = weeklyData.map(d => d.good);
+  const badData = weeklyData.map(d => d.bad);
+  const trendData = weeklyData.map(d => d.good_share_pct);
+
+  // Ratings Bar Chart
+  const ctxRatings = document.getElementById('ratingsChart');
+  if (ctxRatings && labels.length > 0) {
+    new Chart(ctxRatings, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'Good', data: goodData, backgroundColor: '#16a34a' },
+          { label: 'Bad', data: badData, backgroundColor: '#dc2626' }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { stacked: false },
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  // Trend Line Chart
+  const ctxTrend = document.getElementById('trendChart');
+  if (ctxTrend && labels.length > 0) {
+    new Chart(ctxTrend, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: '% Good Answers',
+          data: trendData,
+          borderColor: '#0d9488',
+          backgroundColor: 'rgba(13, 148, 136, 0.1)',
+          fill: true,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { min: 0, max: 100 }
+        }
+      }
+    });
+  }
+</script>
+{% endblock %}

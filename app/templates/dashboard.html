@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - {{ clinic.name }}{% endblock %}
+{% block header_title %}Clinic Dashboard{% endblock %}
+
+{% block content %}
+<!-- Public Chatbot Link Card -->
+<div class="card" style="background: linear-gradient(to right, #f0fdfa, #ffffff); border-color: var(--primary-border);">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--slate-900);">Your Patient Chatbot Link</h3>
+      <p style="color: var(--slate-600); font-size: 0.9rem; margin-top: 0.2rem;">
+        Share this direct link with patients. No account or login required for patients.
+      </p>
+    </div>
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <a href="/c/{{ clinic.slug }}" target="_blank" class="btn btn-primary">
+        Open Chatbot &rarr;
+      </a>
+      <button onclick="navigator.clipboard.writeText(window.location.origin + '/c/{{ clinic.slug }}'); alert('Public Chatbot Link copied to clipboard!');" class="btn btn-secondary">
+        Copy Link
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Stats Grid -->
+<div class="grid-cols-4">
+  <div class="stat-card">
+    <div class="stat-label">Total Questions</div>
+    <div class="stat-value">{{ stats.total_questions }}</div>
+  </div>
+  <div class="stat-card" style="border-left: 4px solid var(--warning);">
+    <div class="stat-label">Pending Questions</div>
+    <div class="stat-value" style="color: var(--warning);">{{ stats.total_pending }}</div>
+  </div>
+  <div class="stat-card" style="border-left: 4px solid var(--success);">
+    <div class="stat-label">Good Ratings</div>
+    <div class="stat-value" style="color: var(--success);">{{ stats.total_good }}</div>
+  </div>
+  <div class="stat-card" style="border-left: 4px solid var(--danger);">
+    <div class="stat-label">Bad Ratings</div>
+    <div class="stat-value" style="color: var(--danger);">{{ stats.total_bad }}</div>
+  </div>
+</div>
+
+<div class="grid-cols-4">
+  <div class="stat-card">
+    <div class="stat-label">Lessons Created</div>
+    <div class="stat-value">{{ stats.total_lessons }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Lessons Applied in Chat</div>
+    <div class="stat-value" style="color: var(--primary);">{{ stats.total_lessons_used }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Knowledge Items</div>
+    <div class="stat-value">{{ stats.total_knowledge }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Active API Keys</div>
+    <div class="stat-value">{{ stats.total_keys }}</div>
+  </div>
+</div>
+
+<!-- Quick Actions & Overview -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+  <div class="card">
+    <h3 class="card-title">Recent Pending Questions</h3>
+    <p style="font-size: 0.85rem; color: var(--slate-500); margin-bottom: 1rem;">Questions requiring clinic staff response</p>
+    {% if pending_items %}
+    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+      {% for item in pending_items %}
+      <div style="padding: 0.75rem; background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 0.5rem;">
+        <div style="font-weight: 600; font-size: 0.9rem; color: var(--slate-800);">{{ item.text }}</div>
+        <div style="font-size: 0.8rem; color: var(--slate-500); margin-top: 0.25rem;">
+          From: {{ item.patient_name }} ({{ item.patient_email }}) &bull; {{ item.asked_at }}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="margin-top: 1rem;">
+      <a href="/admin/pending" class="btn btn-secondary btn-sm">Manage All Pending &rarr;</a>
+    </div>
+    {% else %}
+    <p style="font-size: 0.9rem; color: var(--slate-400); font-style: italic;">No pending questions right now.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3 class="card-title">Quick Actions</h3>
+    <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem;">
+      <a href="/admin/knowledge" class="btn btn-secondary" style="justify-content: flex-start;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        <span>Add New Knowledge (Text, PDF or Price List)</span>
+      </a>
+      <a href="/admin/answers" class="btn btn-secondary" style="justify-content: flex-start;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span>Rate Answers & Review Feedback</span>
+      </a>
+      <a href="/admin/analytics" class="btn btn-secondary" style="justify-content: flex-start;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span>View Weekly Improvement Trends</span>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

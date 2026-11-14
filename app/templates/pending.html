@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Pending Questions - {{ clinic.name }}{% endblock %}
+{% block header_title %}Pending & Escalated Patient Questions{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <div style="display: flex; gap: 0.5rem;">
+      <a href="/admin/pending?status=pending" class="btn {% if status_filter == 'pending' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">Pending Escalations</a>
+      <a href="/admin/pending?status=resolved" class="btn {% if status_filter == 'resolved' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">Answered / Resolved</a>
+    </div>
+    <span style="font-size: 0.85rem; color: var(--slate-500);">Unanswerable or medical advice requests escalated automatically</span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1rem;">
+    {% if questions %}
+      {% for q in questions %}
+      <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 0.75rem; padding: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+          <div>
+            <span style="font-weight: 700; color: var(--slate-900); font-size: 1rem;">{{ q.patient_name }}</span>
+            <span style="color: var(--slate-500); font-size: 0.85rem;">({{ q.patient_email }})</span>
+            <div style="font-size: 0.8rem; color: var(--slate-400); margin-top: 0.15rem;">Received: {{ q.asked_at }}</div>
+          </div>
+          <span class="badge badge-{{ q.status }}">{{ q.status }}</span>
+        </div>
+
+        <div style="background: #ffffff; border: 1px solid var(--slate-200); border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;">
+          <strong style="color: var(--slate-700); font-size: 0.85rem; text-transform: uppercase;">Question:</strong>
+          <p style="font-size: 0.95rem; color: var(--slate-900); margin-top: 0.25rem;">{{ q.text }}</p>
+        </div>
+
+        {% if q.status == 'pending' %}
+        <form method="POST" action="/admin/pending/{{ q.id }}/reply">
+          <div class="form-group">
+            <label class="form-label">Clinic Staff Reply (will be emailed to patient and trigger webhook):</label>
+            <textarea name="reply_text" class="form-control" rows="3" placeholder="Type verified clinic answer..." required></textarea>
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+            <button type="submit" class="btn btn-primary btn-sm">Send Reply & Resolve</button>
+          </div>
+        </form>
+        {% else %}
+        <div style="background: var(--primary-light); border: 1px solid var(--primary-border); border-radius: 0.5rem; padding: 1rem; margin-bottom: 0.75rem;">
+          <strong style="color: var(--primary); font-size: 0.85rem; text-transform: uppercase;">Clinic Response:</strong>
+          <p style="font-size: 0.95rem; color: var(--slate-800); margin-top: 0.25rem;">{{ q.reply_text }}</p>
+          <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 0.5rem;">
+            Emailed to patient: {{ q.emailed_at }} &bull; Status: <span class="badge badge-ready">{{ q.email_status }}</span>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end;">
+          {% if not q.added_to_knowledge_item_id %}
+          <form method="POST" action="/admin/pending/{{ q.id }}/to-knowledge">
+            <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--primary); font-weight: 600;">
+              + Add This Answer to Knowledge Base
+            </button>
+          </form>
+          {% else %}
+          <span class="badge badge-ready" style="padding: 0.4rem 0.8rem;">&check; Added to Knowledge Base</span>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div style="text-align: center; padding: 3rem; color: var(--slate-400);">
+        No questions found for status "{{ status_filter }}".
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
