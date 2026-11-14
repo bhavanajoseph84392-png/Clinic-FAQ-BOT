@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: clinic-faq-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: clinic-faq-db
+          property: connectionString
+      - key: MIGRATION_DATABASE_URL
+        fromDatabase:
+          name: clinic-faq-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ANSWER_MODEL
+        value: gemini-2.5-flash
+      - key: CHECK_MODEL
+        value: gemini-2.5-flash
+      - key: EMBED_MODEL
+        value: text-embedding-004
+      - key: EMAIL_PROVIDER
+        value: resend
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        value: onboarding@resend.dev
+      - key: APP_BASE_URL
+        sync: false
+      - key: LESSON_THRESHOLD
+        value: "0.85"
+      - key: KNOWLEDGE_THRESHOLD
+        value: "0.55"
+      - key: DAILY_AI_BUDGET_PER_CLINIC
+        value: "500"
+
+databases:
+  - name: clinic-faq-db
+    databaseName: clinic_faq
+    user: postgres
+    plan: free
