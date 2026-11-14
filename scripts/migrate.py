@@ -10,6 +10,11 @@ from app.config import settings
 
 def run_migrations():
     db_url = settings.MIGRATION_DATABASE_URL or settings.DATABASE_URL
+    if not db_url or "postgres_password@localhost" in db_url or "***REMOVED***@localhost" in db_url:
+        print("[MIGRATION NOTICE] No production PostgreSQL connection string detected in environment.")
+        print("Please configure DATABASE_URL and MIGRATION_DATABASE_URL in .env before executing migrations.")
+        return False
+
     print(f"Connecting to database for migrations...")
     try:
         with psycopg.connect(db_url, autocommit=True) as conn:
