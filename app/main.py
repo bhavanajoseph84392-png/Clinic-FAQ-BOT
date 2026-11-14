@@ -47,6 +47,41 @@ templates = Jinja2Templates(directory="app/templates")
 app.include_router(api_router)
 app.include_router(chat_router)
 
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
+# Login Rate Limiting (in-memory tracking)
+_login_attempts: dict = {}
+
+def check_login_rate_limit(ip_or_email: str):
+    import time
+    now = time.time()
+    attempts = _login_attempts.get(ip_or_email, [])
+    # Keep attempts from last 300 seconds
+    attempts = [t for t in attempts if now - t < 300]
+    _login_attempts[ip_or_email] = attempts
+    if len(attempts) >= 5:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many failed login attempts. Please wait 5 minutes before trying again."
+        )
+
+def record_failed_login(ip_or_email: str):
+    import time
+    attempts = _login_attempts.get(ip_or_email, [])
+    attempts.append(time.time())
+    _login_attempts[ip_or_email] = attempts
+
+def clear_login_attempts(ip_or_email: str):
+    _login_attempts.pop(ip_or_email, None)
+
 def generate_slug(name: str) -> str:
     """Generates a URL-safe lowercase slug from a clinic name."""
     clean = re.sub(r"[^a-zA-Z0-9]+", "-", name).strip("-").lower()
@@ -128,14 +163,18 @@ async def login_post(
     password: str = Form(...)
 ):
     email = email.strip().lower()
+    check_login_rate_limit(email)
+
     with get_db() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT id, clinic_id, email, password_hash FROM admin_by_email(%s);", (email,))
             user = cur.fetchone()
 
     if not user or not verify_password(user[3], password):
+        record_failed_login(email)
         return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid email or password."})
 
+    clear_login_attempts(email)
     admin_id, clinic_id, user_email = user[0], user[1], user[2]
     session_cookie = create_admin_session_cookie_value(admin_id, clinic_id, user_email)
     redirect = RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)

@@ -33,3 +33,20 @@ def test_pydantic_schemas():
     )
     assert resp.status == "answered"
     assert resp.question_id == "test-q-123"
+
+def test_login_rate_limiting():
+    """Ensure brute force login protection triggers 429 after 5 failed attempts."""
+    from fastapi import HTTPException
+    from app.main import check_login_rate_limit, record_failed_login, clear_login_attempts
+    
+    test_email = "ratelimit_test@clinic.com"
+    clear_login_attempts(test_email)
+    for _ in range(4):
+        record_failed_login(test_email)
+        check_login_rate_limit(test_email)
+        
+    record_failed_login(test_email)
+    with pytest.raises(HTTPException) as exc:
+        check_login_rate_limit(test_email)
+    assert exc.value.status_code == 429
+    clear_login_attempts(test_email)

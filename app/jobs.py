@@ -175,3 +175,7 @@ def start_worker():
 
 def stop_worker():
     _stop_event.set()
+    global _worker_thread
+    if _worker_thread and _worker_thread.is_alive():
+        _worker_thread.join(timeout=1.0)
+        _worker_thread = None

@@ -14,12 +14,13 @@ def get_pool() -> ConnectionPool:
     if _pool is None:
         _pool = ConnectionPool(
             conninfo=settings.DATABASE_URL,
-            min_size=2,
+            min_size=1,
             max_size=20,
+            timeout=2.0,
             open=False
         )
         try:
-            _pool.open()
+            _pool.open(wait=False)
         except Exception as e:
             logger.warning(f"Could not connect to PostgreSQL pool on startup: {e}")
     return _pool
