@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch, MagicMock
 from app.prompts import FALLBACK_MESSAGE
 from app.emailer import send_email
 
@@ -11,13 +12,18 @@ def test_fallback_triggers_pending():
     assert question_status == "pending"
 
 def test_email_send_simulation():
-    """Verify send_email executes cleanly with mock/configured providers."""
-    success = send_email(
-        to_email="patient@example.com",
-        subject="Your Question to Clinic Support",
-        html_body="<p>Clinic reply body</p>",
-        text_body="Clinic reply body"
-    )
+    """Verify send_email returns True without calling the real Resend or SMTP service."""
+    fake_response = MagicMock()
+    fake_response.id = "mock-email-id-123"
+
+    with patch("resend.Emails.send", return_value=fake_response):
+        success = send_email(
+            to_email="patient@example.com",
+            subject="Your Question to Clinic Support",
+            html_body="<p>Clinic reply body</p>",
+            text_body="Clinic reply body",
+        )
+
     assert success is True
 
 def test_add_to_knowledge_schema():
