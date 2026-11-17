@@ -83,11 +83,15 @@ def _simulate_llm_response(system_instruction: str, user_prompt: str) -> str:
 
 def classify_message(question: str) -> str:
     """Classifies user question into: faq, medical, smalltalk, abuse."""
-    classification = _call_gemini(
-        system_instruction=CLASSIFY_SYSTEM,
-        user_prompt=question,
-        model_name=settings.CHECK_MODEL
-    ).strip().lower()
+    try:
+        classification = _call_gemini(
+            system_instruction=CLASSIFY_SYSTEM,
+            user_prompt=question,
+            model_name=settings.CHECK_MODEL
+        ).strip().lower()
+    except Exception:
+        logger.warning("Message classification failed; using safe fallback route.")
+        return "medical"
     
     if "medical" in classification:
         return "medical"
@@ -95,8 +99,10 @@ def classify_message(question: str) -> str:
         return "smalltalk"
     elif "abuse" in classification:
         return "abuse"
-    else:
+    elif "faq" in classification:
         return "faq"
+    else:
+        return "medical"
 
 def verify_grounding(context_text: str, candidate_answer: str) -> bool:
     """Verifies that the generated answer is strictly grounded in the context passages."""
