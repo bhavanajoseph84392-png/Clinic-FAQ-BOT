@@ -577,7 +577,7 @@ async def api_page(request: Request, admin: dict = Depends(require_admin)):
                 for r in rows
             ]
 
-    new_key = request.session.pop("newly_created_key", None) if hasattr(request, "session") else None
+    new_key = request.scope.get("session", {}).pop("newly_created_key", None)
 
     return templates.TemplateResponse("api.html", {
         "request": request,
