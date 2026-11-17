@@ -4,6 +4,7 @@ from html import escape
 from typing import Dict, Any
 from fastapi import APIRouter, Request, HTTPException, Form, Response, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from app.config import settings
 from app.db import tenant_tx
 from app.validation import is_valid_email
 from app.auth import create_patient_token, PATIENT_COOKIE_NAME, PATIENT_SESSION_MAX_AGE
@@ -40,7 +41,8 @@ async def create_session(request: Request, response: Response, slug: str, name: 
         value=raw_token,
         max_age=PATIENT_SESSION_MAX_AGE,
         httponly=True,
-        samesite="lax"
+        samesite="lax",
+        secure=settings.COOKIE_SECURE
     )
     return redirect
 

@@ -146,7 +146,7 @@ async def signup_post(
 
         session_cookie = create_admin_session_cookie_value(admin_id, clinic_id, email)
         redirect = RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
-        redirect.set_cookie(COOKIE_NAME, session_cookie, max_age=SESSION_MAX_AGE, httponly=True, samesite="lax")
+        redirect.set_cookie(COOKIE_NAME, session_cookie, max_age=SESSION_MAX_AGE, httponly=True, samesite="lax", secure=settings.COOKIE_SECURE)
         return redirect
     except Exception as e:
         return templates.TemplateResponse("signup.html", {"request": request, "error": f"Registration failed: {str(e)}"})
@@ -178,13 +178,13 @@ async def login_post(
     admin_id, clinic_id, user_email = user[0], user[1], user[2]
     session_cookie = create_admin_session_cookie_value(admin_id, clinic_id, user_email)
     redirect = RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
-    redirect.set_cookie(COOKIE_NAME, session_cookie, max_age=SESSION_MAX_AGE, httponly=True, samesite="lax")
+    redirect.set_cookie(COOKIE_NAME, session_cookie, max_age=SESSION_MAX_AGE, httponly=True, samesite="lax", secure=settings.COOKIE_SECURE)
     return redirect
 
 @app.get("/logout")
 async def logout():
     redirect = RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-    redirect.delete_cookie(COOKIE_NAME)
+    redirect.delete_cookie(COOKIE_NAME, httponly=True, samesite="lax", secure=settings.COOKIE_SECURE)
     return redirect
 
 # ----------------- Helper: Fetch Clinic Info -----------------
