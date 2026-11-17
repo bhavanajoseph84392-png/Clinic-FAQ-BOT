@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, Any
 from fastapi import APIRouter, Request, HTTPException, Form, Response, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from app.db import get_db, tenant_tx
+from app.db import tenant_tx
 from app.auth import create_patient_token, PATIENT_COOKIE_NAME, PATIENT_SESSION_MAX_AGE
 from app.tenancy import resolve_clinic_by_slug, resolve_patient_session
 from app.rag import answer_question, FALLBACK_MESSAGE
@@ -24,7 +24,7 @@ async def create_session(request: Request, response: Response, slug: str, name: 
     raw_token, token_hash = create_patient_token()
     expires_at = datetime.now(timezone.utc) + timedelta(seconds=PATIENT_SESSION_MAX_AGE)
 
-    with get_db() as conn:
+    with tenant_tx(clinic["id"]) as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO patient_sessions (clinic_id, name, email, token_hash, expires_at)
