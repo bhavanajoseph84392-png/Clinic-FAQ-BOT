@@ -2,6 +2,7 @@ import os
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -10,12 +11,26 @@ from app.auth import hash_password, hash_token
 from app.knowledge import process_knowledge_item
 from app.embeddings import get_single_embedding
 from app.api_v1 import generate_clinic_api_key
+from app.config import settings
+
+LOCAL_DATABASE_HOSTS = {"localhost", "127.0.0.1", "::1"}
+
+def database_is_local(db_url: str) -> bool:
+    try:
+        host = urlparse(db_url).hostname
+    except ValueError:
+        return False
+    return host in LOCAL_DATABASE_HOSTS
 
 def seed_demo_data():
     admin_password = os.getenv("DEMO_ADMIN_PASSWORD")
     webhook_secret = os.getenv("DEMO_WEBHOOK_SECRET")
     if not admin_password or not webhook_secret:
         print("Missing DEMO_ADMIN_PASSWORD or DEMO_WEBHOOK_SECRET environment variable.", file=sys.stderr)
+        sys.exit(1)
+
+    if not database_is_local(settings.DATABASE_URL):
+        print("Refusing to seed demo data: database host is not local.", file=sys.stderr)
         sys.exit(1)
 
     print("Seeding multi-tenant demonstration data...")
@@ -35,7 +50,7 @@ def seed_demo_data():
             cur.execute("""
                 INSERT INTO admin_users (clinic_id, email, password_hash, role)
                 VALUES (%s, 'admin@sunriseclinic.com', %s, 'owner')
-                ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash;
+                ON CONFLICT (email) DO NOTHING;
             """, (clinic_a_id, password_hash))
 
             # 2. City Care Clinic
@@ -50,7 +65,7 @@ def seed_demo_data():
             cur.execute("""
                 INSERT INTO admin_users (clinic_id, email, password_hash, role)
                 VALUES (%s, 'admin@citycareclinic.com', %s, 'owner')
-                ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash;
+                ON CONFLICT (email) DO NOTHING;
             """, (clinic_b_id, password_hash))
 
     print(f"Created/verified clinics: Sunrise Clinic ({clinic_a_id}) and City Care Clinic ({clinic_b_id})")
