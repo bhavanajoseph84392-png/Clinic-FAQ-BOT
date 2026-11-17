@@ -52,5 +52,5 @@ def tenant_tx(clinic_id: str) -> Generator[psycopg.Connection, None, None]:
         with conn.transaction():
             with conn.cursor() as cur:
                 # Set local tenant parameter for Row-Level Security
-                cur.execute("SET LOCAL app.clinic_id = %s;", (str(clinic_id),))
+                cur.execute("SELECT set_config('app.clinic_id', %s, true);", (str(clinic_id),))
             yield conn
