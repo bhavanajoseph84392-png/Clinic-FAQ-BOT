@@ -85,6 +85,38 @@ def _deliver_webhook(clinic_id: str, job_payload: dict) -> bool:
             
     return is_success
 
+def _record_job_failure(job: dict, error: Exception) -> None:
+    """Records a job failure, retrying it according to the existing schedule."""
+    job_id = job.get("id")
+    clinic_id = job.get("clinic_id")
+    job_type = job.get("type")
+    attempts = job.get("attempts", 0) + 1
+
+    try:
+        retry_delays = [60, 300, 1800]
+        if attempts <= len(retry_delays):
+            next_run = datetime.now(timezone.utc) + timedelta(seconds=retry_delays[attempts - 1])
+            with tenant_tx(clinic_id) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        UPDATE jobs 
+                        SET status = 'queued', attempts = %s, last_error = %s, run_at = %s 
+                        WHERE id = %s;
+                    """, (attempts, str(error), next_run, job_id))
+        else:
+            with tenant_tx(clinic_id) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        UPDATE jobs 
+                        SET status = 'failed', attempts = %s, last_error = %s 
+                        WHERE id = %s;
+                    """, (attempts, str(error), job_id))
+    except Exception as mark_error:
+        logger.error(
+            f"Could not record failure for job {job_id} ({job_type}): "
+            f"{type(mark_error).__name__}: {mark_error}"
+        )
+
 def _execute_job(job: dict):
     job_id = job["id"]
     clinic_id = job["clinic_id"]
@@ -124,26 +156,8 @@ def _execute_job(job: dict):
                 cur.execute("UPDATE jobs SET status = 'done', attempts = %s WHERE id = %s;", (attempts, job_id))
 
     except Exception as e:
-        logger.error(f"Job {job_id} ({job_type}) attempt {attempts} failed: {e}")
-        # Retry logic: 1 min, 5 min, 30 min
-        retry_delays = [60, 300, 1800]
-        if attempts <= len(retry_delays):
-            next_run = datetime.now(timezone.utc) + timedelta(seconds=retry_delays[attempts - 1])
-            with tenant_tx(clinic_id) as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        UPDATE jobs 
-                        SET status = 'queued', attempts = %s, last_error = %s, run_at = %s 
-                        WHERE id = %s;
-                    """, (attempts, str(e), next_run, job_id))
-        else:
-            with tenant_tx(clinic_id) as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        UPDATE jobs 
-                        SET status = 'failed', attempts = %s, last_error = %s 
-                        WHERE id = %s;
-                    """, (attempts, str(e), job_id))
+        logger.error(f"Job {job_id} ({job_type}) attempt {attempts} failed: {type(e).__name__}: {e}")
+        _record_job_failure(job, e)
 
 def worker_loop():
     logger.info("Background jobs worker started.")
@@ -162,7 +176,15 @@ def worker_loop():
             continue
 
         if job_record:
-            _execute_job(job_record)
+            try:
+                _execute_job(job_record)
+            except Exception as e:
+                logger.error(
+                    f"Unexpected worker error for job {job_record.get('id')} "
+                    f"({job_record.get('type')}): {type(e).__name__}: {e}"
+                )
+                _record_job_failure(job_record, e)
+                time.sleep(2)
         else:
             time.sleep(1)
 
