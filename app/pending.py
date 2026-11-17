@@ -1,4 +1,5 @@
 import logging
+from html import escape
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, Request, HTTPException, Form, Depends, status
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
@@ -65,11 +66,11 @@ def reply_to_pending_question(clinic_id: str, question_id: str, reply_text: str)
             email_status_str = "failed"
             if p_email and "@" in p_email:
                 subject = "Your Question to Clinic Support"
-                body = f"""<p>Dear {p_name or 'Patient'},</p>
+                body = f"""<p>Dear {escape(p_name or 'Patient')},</p>
 <p>Thank you for reaching out with your question:</p>
-<blockquote><i>{q_text}</i></blockquote>
+<blockquote><i>{escape(q_text)}</i></blockquote>
 <p><strong>Clinic Response:</strong></p>
-<p>{reply_text}</p>
+<p>{escape(reply_text)}</p>
 <p>Best regards,<br>Clinic Team</p>"""
                 email_sent = send_email(p_email, subject, body, text_body=f"Your question: {q_text}\nClinic Response: {reply_text}")
                 email_status_str = "sent" if email_sent else "failed"

@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timedelta, timezone
+from html import escape
 from typing import Dict, Any
 from fastapi import APIRouter, Request, HTTPException, Form, Response, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -95,8 +96,8 @@ async def handle_patient_message(request: Request, slug: str):
             "to_email": clinic["contact_email"],
             "subject": f"New Pending Patient Question: {clinic['name']}",
             "html_body": f"""<p>A patient submitted a question that requires clinic attention:</p>
-<p><strong>Patient:</strong> {session['name']} ({session['email']})</p>
-<p><strong>Question:</strong> {question_text}</p>
+<p><strong>Patient:</strong> {escape(session['name'])} ({escape(session['email'])})</p>
+<p><strong>Question:</strong> {escape(question_text)}</p>
 <p>Please log in to your clinic admin dashboard at /admin/pending to answer.</p>"""
         }
         enqueue_job(clinic_id, "send_email", notify_payload)
