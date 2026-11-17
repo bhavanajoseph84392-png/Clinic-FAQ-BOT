@@ -108,7 +108,7 @@ def test_chat_fallback_email_escapes_patient_values(monkeypatch):
 
 
 def test_pending_reply_email_escapes_patient_values(monkeypatch):
-    p_email = "<x>@"
+    p_email = "user@example.test"
     question = ("question-1", "<i>Pat</i>", p_email, "<script>alert(1)</script>", "pending")
     connection = FakeConnection(FakeCursor(question=question))
 

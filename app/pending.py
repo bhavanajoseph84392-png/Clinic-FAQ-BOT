@@ -5,6 +5,7 @@ from fastapi import APIRouter, Request, HTTPException, Form, Depends, status
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from app.auth import require_admin
 from app.db import tenant_tx
+from app.validation import is_valid_email
 from app.jobs import enqueue_job
 from app.emailer import send_email
 
@@ -64,7 +65,7 @@ def reply_to_pending_question(clinic_id: str, question_id: str, reply_text: str)
             # Send email directly or queue
             email_sent = False
             email_status_str = "failed"
-            if p_email and "@" in p_email:
+            if is_valid_email(p_email):
                 subject = "Your Question to Clinic Support"
                 body = f"""<p>Dear {escape(p_name or 'Patient')},</p>
 <p>Thank you for reaching out with your question:</p>

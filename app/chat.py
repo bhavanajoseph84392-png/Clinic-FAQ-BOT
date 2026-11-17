@@ -5,6 +5,7 @@ from typing import Dict, Any
 from fastapi import APIRouter, Request, HTTPException, Form, Response, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from app.db import tenant_tx
+from app.validation import is_valid_email
 from app.auth import create_patient_token, PATIENT_COOKIE_NAME, PATIENT_SESSION_MAX_AGE
 from app.tenancy import resolve_clinic_by_slug, resolve_patient_session
 from app.rag import answer_question, FALLBACK_MESSAGE
@@ -19,7 +20,7 @@ async def create_session(request: Request, response: Response, slug: str, name: 
     name = name.strip()
     email = email.strip()
     
-    if not name or not email or "@" not in email:
+    if not name or not is_valid_email(email):
         raise HTTPException(status_code=400, detail="Valid name and email are required.")
 
     raw_token, token_hash = create_patient_token()
