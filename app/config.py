@@ -4,10 +4,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def _require_env(name: str) -> str:
+    value = os.getenv(name)
+    if not value:
+        raise RuntimeError(f"Missing required environment variable: {name}")
+    return value
+
+
 class Settings(BaseModel):
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://app_user:***REMOVED***@localhost:5432/clinic_faq")
-    MIGRATION_DATABASE_URL: str = os.getenv("MIGRATION_DATABASE_URL", os.getenv("DATABASE_URL", "postgresql://postgres:postgres_password@localhost:5432/clinic_faq"))
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "REDACTED")
+    DATABASE_URL: str = _require_env("DATABASE_URL")
+    MIGRATION_DATABASE_URL: str = _require_env("MIGRATION_DATABASE_URL")
+    SECRET_KEY: str = _require_env("SECRET_KEY")
     
     # AI Configuration (Gemini)
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")

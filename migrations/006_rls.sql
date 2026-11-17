@@ -1,8 +1,9 @@
 -- 006_rls.sql
+-- The app_user password is applied from APP_USER_PASSWORD by scripts/migrate.py.
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'app_user') THEN
-    CREATE ROLE app_user LOGIN PASSWORD '***REMOVED***';
+    CREATE ROLE app_user LOGIN;
   END IF;
 END
 $$;

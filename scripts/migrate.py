@@ -3,17 +3,21 @@ import glob
 import sys
 import psycopg
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from app.config import settings
+load_dotenv()
 
 def run_migrations():
-    db_url = settings.MIGRATION_DATABASE_URL or settings.DATABASE_URL
-    if not db_url or "postgres_password@localhost" in db_url or "***REMOVED***@localhost" in db_url:
-        print("[MIGRATION NOTICE] No production PostgreSQL connection string detected in environment.")
-        print("Please configure DATABASE_URL and MIGRATION_DATABASE_URL in .env before executing migrations.")
+    missing = [name for name in ("MIGRATION_DATABASE_URL", "APP_USER_PASSWORD") if not os.getenv(name)]
+    if missing:
+        print(f"[MIGRATION NOTICE] Missing required environment variables: {', '.join(missing)}")
+        print("Please set them in .env before executing migrations.")
         return False
+
+    db_url = os.environ["MIGRATION_DATABASE_URL"]
+    app_user_password = os.environ["APP_USER_PASSWORD"]
 
     print(f"Connecting to database for migrations...")
     try:
@@ -42,6 +46,8 @@ def run_migrations():
                     cur.execute(sql)
                     cur.execute("INSERT INTO schema_migrations (filename) VALUES (%s);", (filename,))
                     print(f"  [SUCCESS] {filename}")
+
+                cur.execute("ALTER ROLE app_user WITH PASSWORD %s;", (app_user_password,))
         print("All migrations completed successfully.")
     except Exception as e:
         print(f"Migration error: {e}", file=sys.stderr)

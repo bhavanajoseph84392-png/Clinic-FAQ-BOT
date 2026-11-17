@@ -1,3 +1,4 @@
+import os
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -11,18 +12,24 @@ from app.embeddings import get_single_embedding
 from app.api_v1 import generate_clinic_api_key
 
 def seed_demo_data():
+    admin_password = os.getenv("DEMO_ADMIN_PASSWORD")
+    webhook_secret = os.getenv("DEMO_WEBHOOK_SECRET")
+    if not admin_password or not webhook_secret:
+        print("Missing DEMO_ADMIN_PASSWORD or DEMO_WEBHOOK_SECRET environment variable.", file=sys.stderr)
+        sys.exit(1)
+
     print("Seeding multi-tenant demonstration data...")
-    password_hash = hash_password("***REMOVED***!")
+    password_hash = hash_password(admin_password)
 
     with get_db() as conn:
         with conn.cursor() as cur:
             # 1. Sunrise Clinic
             cur.execute("""
                 INSERT INTO clinics (name, slug, contact_email, webhook_url, webhook_secret)
-                VALUES ('Sunrise Clinic', 'sunrise-clinic', 'support@sunriseclinic.com', 'https://example.com/webhook', 'sunrise_***REMOVED***')
+                VALUES ('Sunrise Clinic', 'sunrise-clinic', 'support@sunriseclinic.com', 'https://example.com/webhook', %s)
                 ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
                 RETURNING id;
-            """)
+            """, (webhook_secret,))
             clinic_a_id = cur.fetchone()[0]
 
             cur.execute("""
