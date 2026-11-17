@@ -22,9 +22,8 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: Optional[
         try:
             import resend
             if not settings.RESEND_API_KEY:
-                logger.warning("RESEND_API_KEY is not set. Simulating email log.")
-                print(f"[EMAIL MOCK - RESEND] To: {to_email} | Subject: {subject}\n{html_body}")
-                return True
+                logger.warning("Email provider is not configured; no email was sent.")
+                return False
                 
             resend.api_key = settings.RESEND_API_KEY
             params = {
@@ -53,9 +52,8 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: Optional[
     elif provider == "smtp":
         try:
             if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-                logger.warning("SMTP credentials not configured. Simulating email log.")
-                print(f"[EMAIL MOCK - SMTP] To: {to_email} | Subject: {subject}\n{html_body}")
-                return True
+                logger.warning("Email provider is not configured; no email was sent.")
+                return False
                 
             msg = MIMEMultipart("alternative")
             msg["Subject"] = subject
