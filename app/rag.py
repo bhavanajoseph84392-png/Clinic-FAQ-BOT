@@ -112,7 +112,7 @@ def verify_grounding(context_text: str, candidate_answer: str) -> bool:
         user_prompt=prompt,
         model_name=settings.CHECK_MODEL
     ).strip().upper()
-    return "PASS" in result
+    return result == "PASS"
 
 def answer_question(clinic_id: str, question_text: str) -> Dict[str, Any]:
     """
