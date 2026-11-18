@@ -1,6 +1,7 @@
 import os
 import sys
 import psycopg
+from psycopg import sql
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -47,16 +48,20 @@ def run_migrations():
                             continue
 
                         print(f"  [APPLYING] {filename}...")
-                        sql = mf.read_text(encoding="utf-8")
+                        migration_sql = mf.read_text(encoding="utf-8")
 
                         # Execute migration
-                        cur.execute(sql)
+                        cur.execute(migration_sql)
                         cur.execute("INSERT INTO schema_migrations (filename) VALUES (%s);", (filename,))
                     print(f"  [SUCCESS] {filename}")
 
             with conn.transaction():
                 with conn.cursor() as cur:
-                    cur.execute("ALTER ROLE app_user WITH PASSWORD %s;", (app_user_password,))
+                    cur.execute(
+                        sql.SQL("ALTER ROLE app_user WITH PASSWORD {}").format(
+                            sql.Literal(app_user_password)
+                        )
+                    )
         print("All migrations completed successfully.")
     except Exception as e:
         print(f"Migration error: {e}", file=sys.stderr)

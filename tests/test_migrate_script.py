@@ -79,6 +79,35 @@ def test_migrations_use_script_relative_path_and_transactions(monkeypatch, tmp_p
     assert connection.transactions >= len(inserted) + 1
 
 
+def test_alter_role_uses_literal_password_not_bound_parameter(monkeypatch, tmp_path):
+    module = load_migrate_module()
+    connection = FakeConnection()
+    monkeypatch.setattr(module.psycopg, "connect", lambda *args, **kwargs: connection)
+    password = "s3cret'pw"
+    monkeypatch.setenv("MIGRATION_DATABASE_URL", "unused")
+    monkeypatch.setenv("APP_USER_PASSWORD", password)
+    monkeypatch.chdir(tmp_path)
+
+    assert module.run_migrations() is True
+
+    def render(statement):
+        return statement.as_string(None) if hasattr(statement, "as_string") else statement
+
+    alter_executions = [
+        (statement, params)
+        for statement, params in connection.executions
+        if "ALTER ROLE" in render(statement)
+    ]
+    assert len(alter_executions) == 1
+
+    statement, params = alter_executions[0]
+    rendered = render(statement)
+    assert params is None
+    assert "PASSWORD 's3cret''pw'" in rendered
+    assert "%s" not in rendered
+    assert "$1" not in rendered
+
+
 def test_no_migration_files_returns_error_without_connecting(monkeypatch, tmp_path):
     module = load_migrate_module()
     monkeypatch.setattr(module, "MIGRATIONS_DIR", tmp_path)
