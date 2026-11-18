@@ -6,15 +6,15 @@ import app.jobs
 
 
 class FakeCursor:
-    def __init__(self, job):
-        self.job = job
+    def __init__(self, jobs):
+        self.jobs = jobs
         self.executions = []
 
     def execute(self, sql, params=None):
         self.executions.append((sql, params))
 
     def fetchone(self):
-        return (self.job,)
+        return (self.jobs.pop(0) if self.jobs else None,)
 
     def __enter__(self):
         return self
@@ -24,37 +24,50 @@ class FakeCursor:
 
 
 class FakeConnection:
-    def __init__(self, job):
-        self.cursor_obj = FakeCursor(job)
+    def __init__(self, jobs):
+        self.cursor_obj = FakeCursor(jobs)
 
     def cursor(self):
         return self.cursor_obj
 
 
 def test_worker_loop_survives_job_error_and_records_failure(monkeypatch, caplog):
-    job = {
-        "id": "job-1",
-        "clinic_id": "clinic-1",
-        "type": "send_email",
-        "payload": "SECRET-PAYLOAD-123",
-        "attempts": 0,
-    }
+    sentinel = "SECRET-PAYLOAD-123"
+    jobs = [
+        {
+            "id": "job-1",
+            "clinic_id": "clinic-1",
+            "type": "send_email",
+            "payload": sentinel,
+            "attempts": 0,
+        },
+        {
+            "id": "job-2",
+            "clinic_id": "clinic-1",
+            "type": "send_email",
+            "payload": sentinel + "-second",
+            "attempts": 0,
+        },
+    ]
+    executed = []
     recorded = []
     sleeps = []
 
     @contextlib.contextmanager
     def fake_get_db():
-        yield FakeConnection(job)
+        yield FakeConnection(jobs)
 
-    def raise_error(_job):
-        raise RuntimeError("boom")
+    def execute(job):
+        executed.append(job["id"])
+        if job["id"] == "job-1":
+            raise RuntimeError("boom")
+        app.jobs._stop_event.set()
 
     def record_failure(failed_job, error):
         recorded.append((failed_job, error))
-        app.jobs._stop_event.set()
 
     monkeypatch.setattr(app.jobs, "get_db", fake_get_db)
-    monkeypatch.setattr(app.jobs, "_execute_job", raise_error)
+    monkeypatch.setattr(app.jobs, "_execute_job", execute)
     monkeypatch.setattr(app.jobs, "_record_job_failure", record_failure)
     monkeypatch.setattr(app.jobs, "time", type("Time", (), {"sleep": staticmethod(lambda s: sleeps.append(s))}))
     monkeypatch.setattr(app.jobs, "_stop_event", threading.Event())
@@ -62,9 +75,10 @@ def test_worker_loop_survives_job_error_and_records_failure(monkeypatch, caplog)
     with caplog.at_level(logging.ERROR, logger="clinic_faq.jobs"):
         app.jobs.worker_loop()
 
+    assert executed == ["job-1", "job-2"]
     assert recorded and isinstance(recorded[0][1], RuntimeError)
     assert sleeps and 1 <= sleeps[-1] <= 5
-    assert "SECRET-PAYLOAD-123" not in caplog.text
+    assert sentinel not in caplog.text
     assert "RuntimeError" in caplog.text
 
 
