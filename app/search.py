@@ -17,10 +17,10 @@ def search_lessons(clinic_id: str, question: str) -> Optional[Dict[str, Any]]:
             cur.execute("""
                 SELECT id, question_text, correct_answer, comment, 1 - (embedding <=> %s::vector) AS sim
                 FROM lessons
-                WHERE enabled = true AND embedding IS NOT NULL
+                WHERE enabled = true AND embedding IS NOT NULL AND clinic_id = %s
                 ORDER BY embedding <=> %s::vector
                 LIMIT 1;
-            """, (embedding, embedding))
+            """, (embedding, clinic_id, embedding))
             row = cur.fetchone()
             if row:
                 lesson_id, q_text, correct_ans, comment, sim = row
@@ -48,10 +48,10 @@ def hybrid_search(clinic_id: str, question: str, top_k: int = 5) -> Tuple[List[D
                 SELECT c.id, c.item_id, c.content, 1 - (c.embedding <=> %s::vector) AS sim, k.title
                 FROM knowledge_chunks c
                 JOIN knowledge_items k ON c.item_id = k.id
-                WHERE c.embedding IS NOT NULL
+                WHERE c.embedding IS NOT NULL AND c.clinic_id = %s
                 ORDER BY c.embedding <=> %s::vector
                 LIMIT 20;
-            """, (query_emb, query_emb))
+            """, (query_emb, clinic_id, query_emb))
             vector_rows = cur.fetchall()
             
             # 2. Keyword Search
@@ -59,10 +59,10 @@ def hybrid_search(clinic_id: str, question: str, top_k: int = 5) -> Tuple[List[D
                 SELECT c.id, c.item_id, c.content, ts_rank(c.tsv, websearch_to_tsquery('english', %s)) AS rank, k.title
                 FROM knowledge_chunks c
                 JOIN knowledge_items k ON c.item_id = k.id
-                WHERE c.tsv @@ websearch_to_tsquery('english', %s)
+                WHERE c.tsv @@ websearch_to_tsquery('english', %s) AND c.clinic_id = %s
                 ORDER BY rank DESC
                 LIMIT 20;
-            """, (question, question))
+            """, (question, question, clinic_id))
             keyword_rows = cur.fetchall()
             
     best_similarity = float(vector_rows[0][3]) if vector_rows and vector_rows[0][3] is not None else 0.0

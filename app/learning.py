@@ -21,8 +21,8 @@ def rate_answer(clinic_id: str, answer_id: str, value: str, correct_answer: Opti
                 SELECT a.id, a.text, q.text, q.id
                 FROM answers a
                 JOIN questions q ON a.question_id = q.id
-                WHERE a.id = %s;
-            """, (answer_id,))
+                WHERE a.id = %s AND a.clinic_id = %s;
+            """, (answer_id, clinic_id))
             ans_row = cur.fetchone()
             if not ans_row:
                 raise ValueError("Answer not found")
@@ -64,8 +64,9 @@ def list_lessons(clinic_id: str) -> List[Dict[str, Any]]:
             cur.execute("""
                 SELECT id, question_text, bad_answer, correct_answer, comment, enabled, times_used, created_at
                 FROM lessons
+                WHERE clinic_id = %s
                 ORDER BY created_at DESC;
-            """)
+            """, (clinic_id,))
             rows = cur.fetchall()
             return [
                 {
@@ -84,13 +85,13 @@ def list_lessons(clinic_id: str) -> List[Dict[str, Any]]:
 def toggle_lesson(clinic_id: str, lesson_id: str, enabled: bool) -> bool:
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
-            cur.execute("UPDATE lessons SET enabled = %s WHERE id = %s RETURNING id;", (enabled, lesson_id))
+            cur.execute("UPDATE lessons SET enabled = %s WHERE id = %s AND clinic_id = %s RETURNING id;", (enabled, lesson_id, clinic_id))
             return cur.fetchone() is not None
 
 def delete_lesson(clinic_id: str, lesson_id: str) -> bool:
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM lessons WHERE id = %s RETURNING id;", (lesson_id,))
+            cur.execute("DELETE FROM lessons WHERE id = %s AND clinic_id = %s RETURNING id;", (lesson_id, clinic_id))
             return cur.fetchone() is not None
 
 def ask_again(clinic_id: str, old_answer_id: str) -> Dict[str, Any]:
@@ -100,8 +101,8 @@ def ask_again(clinic_id: str, old_answer_id: str) -> Dict[str, Any]:
                 SELECT a.id, a.text, a.kind, a.source_title, a.lesson_id, q.id, q.text
                 FROM answers a
                 JOIN questions q ON a.question_id = q.id
-                WHERE a.id = %s;
-            """, (old_answer_id,))
+                WHERE a.id = %s AND a.clinic_id = %s;
+            """, (old_answer_id, clinic_id))
             row = cur.fetchone()
             if not row:
                 raise ValueError("Original answer not found")
@@ -124,6 +125,12 @@ def ask_again(clinic_id: str, old_answer_id: str) -> Dict[str, Any]:
                 new_result["lesson_id"], new_result["confidence"], old_answer_id
             ))
             new_ans_id = cur.fetchone()[0]
+
+            if new_result["kind"] == "lesson" and new_result["lesson_id"]:
+                cur.execute("""
+                    INSERT INTO lesson_uses (clinic_id, lesson_id, answer_id)
+                    VALUES (%s, %s, %s);
+                """, (clinic_id, new_result["lesson_id"], new_ans_id))
 
     return {
         "question": q_text,
@@ -153,9 +160,10 @@ def get_analytics(clinic_id: str) -> Dict[str, Any]:
                        value,
                        COUNT(*)
                 FROM ratings
+                WHERE clinic_id = %s
                 GROUP BY wk, value
                 ORDER BY wk ASC;
-            """)
+            """, (clinic_id,))
             rating_rows = cur.fetchall()
 
             # Weekly lessons used
@@ -163,28 +171,29 @@ def get_analytics(clinic_id: str) -> Dict[str, Any]:
                 SELECT to_char(date_trunc('week', used_at), 'YYYY-"W"IW') AS wk,
                        COUNT(*)
                 FROM lesson_uses
+                WHERE clinic_id = %s
                 GROUP BY wk
                 ORDER BY wk ASC;
-            """)
+            """, (clinic_id,))
             lesson_rows = cur.fetchall()
 
             # Overall summary counts
-            cur.execute("SELECT COUNT(*) FROM questions;")
+            cur.execute("SELECT COUNT(*) FROM questions WHERE clinic_id = %s;", (clinic_id,))
             total_questions = cur.fetchone()[0]
 
-            cur.execute("SELECT COUNT(*) FROM questions WHERE status = 'pending';")
+            cur.execute("SELECT COUNT(*) FROM questions WHERE status = 'pending' AND clinic_id = %s;", (clinic_id,))
             total_pending = cur.fetchone()[0]
 
-            cur.execute("SELECT COUNT(*) FROM ratings WHERE value = 'good';")
+            cur.execute("SELECT COUNT(*) FROM ratings WHERE value = 'good' AND clinic_id = %s;", (clinic_id,))
             total_good = cur.fetchone()[0]
 
-            cur.execute("SELECT COUNT(*) FROM ratings WHERE value = 'bad';")
+            cur.execute("SELECT COUNT(*) FROM ratings WHERE value = 'bad' AND clinic_id = %s;", (clinic_id,))
             total_bad = cur.fetchone()[0]
 
-            cur.execute("SELECT COUNT(*) FROM lessons;")
+            cur.execute("SELECT COUNT(*) FROM lessons WHERE clinic_id = %s;", (clinic_id,))
             total_lessons = cur.fetchone()[0]
 
-            cur.execute("SELECT coalesce(SUM(times_used), 0) FROM lessons;")
+            cur.execute("SELECT coalesce(SUM(times_used), 0) FROM lessons WHERE clinic_id = %s;", (clinic_id,))
             total_lessons_used = cur.fetchone()[0]
 
     # Process weekly ratings into chart-ready structures

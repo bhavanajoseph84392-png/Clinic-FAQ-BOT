@@ -1,5 +1,6 @@
 import re
 import logging
+import httpx
 from typing import Dict, Any, List, Optional
 from app.config import settings
 from app.db import tenant_tx
@@ -14,20 +15,93 @@ from app.search import search_lessons, hybrid_search
 
 logger = logging.getLogger("clinic_faq.rag")
 
+EMERGENCY_MESSAGE = (
+    "If this is an emergency, please call 112 or go to the nearest hospital now. "
+    "The clinic will also reply to you by email."
+)
+
+URGENT_SYMPTOM_KEYWORDS = (
+    "chest pain",
+    "chest tightness",
+    "pressure in my chest",
+    "trouble breathing",
+    "difficulty breathing",
+    "can't breathe",
+    "cannot breathe",
+    "shortness of breath",
+    "short of breath",
+    "severe bleeding",
+    "heavy bleeding",
+    "bleeding heavily",
+    "bleeding a lot",
+    "fainting",
+    "fainted",
+    "passed out",
+    "unconscious",
+    "signs of a stroke",
+    "numbness on one side",
+    "sudden numbness",
+    "think i'm having a stroke",
+    "having a stroke",
+    "face drooping",
+    "slurred speech",
+    "sudden weakness",
+    "suicidal",
+    "suicide",
+    "kill myself",
+    "end my life",
+    "want to die",
+    "self-harm",
+    "self harm",
+)
+
+def mentions_urgent_symptom(text: str) -> bool:
+    lowered = (text or "").lower().replace("\u2019", "'")
+    return any(keyword in lowered for keyword in URGENT_SYMPTOM_KEYWORDS)
+
 def _check_daily_budget(clinic_id: str) -> bool:
     """Checks if clinic has exceeded DAILY_AI_BUDGET_PER_CLINIC for today."""
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT COUNT(*) FROM answers
-                WHERE kind = 'ai' AND created_at >= date_trunc('day', now());
-            """)
+                WHERE clinic_id = %s AND kind = 'ai' AND created_at >= date_trunc('day', now());
+            """, (clinic_id,))
             row = cur.fetchone()
             count = row[0] if row else 0
             return count >= settings.DAILY_AI_BUDGET_PER_CLINIC
 
 def _call_gemini(system_instruction: str, user_prompt: str, model_name: str) -> str:
-    """Invokes Gemini API with provided prompt and system instruction."""
+    """Invokes the configured chat provider with the prompt and system instruction."""
+    nvidia_base_url = settings.NVIDIA_BASE_URL.rstrip("/")
+    if settings.NVIDIA_API_KEY and nvidia_base_url:
+        try:
+            with httpx.Client(timeout=60.0) as client:
+                response = client.post(
+                    f"{nvidia_base_url}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {settings.NVIDIA_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": model_name,
+                        "messages": [
+                            {"role": "system", "content": system_instruction},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        "temperature": 0,
+                        "max_tokens": 512,
+                    },
+                )
+                response.raise_for_status()
+                data = response.json()
+                content = data["choices"][0]["message"]["content"]
+                return content.strip() if content else ""
+        except Exception as e:
+            status = getattr(getattr(e, "response", None), "status_code", "")
+            logger.error("NVIDIA chat request failed: %s %s", type(e).__name__, status)
+            return ""
+
     if not settings.GEMINI_API_KEY or settings.GEMINI_API_KEY.startswith("your_"):
         # Deterministic simulation for tests/offline
         return _simulate_llm_response(system_instruction, user_prompt)
@@ -47,7 +121,7 @@ def _call_gemini(system_instruction: str, user_prompt: str, model_name: str) -> 
         )
         return response.text.strip() if response and response.text else ""
     except Exception as e:
-        logger.error(f"Gemini API call failed: {e}")
+        logger.error("Gemini API call failed: %s", type(e).__name__)
         return ""
 
 def _simulate_llm_response(system_instruction: str, user_prompt: str) -> str:
@@ -104,8 +178,15 @@ def classify_message(question: str) -> str:
     else:
         return "medical"
 
+_NUMBER_RE = re.compile(r"\d+")
 def verify_grounding(context_text: str, candidate_answer: str) -> bool:
-    """Verifies that the generated answer is strictly grounded in the context passages."""
+    """Strict check: every number in the answer must appear in the context, then the model must say PASS."""
+    answer_numbers = {int(n) for n in _NUMBER_RE.findall(candidate_answer)}
+    context_numbers = {int(n) for n in _NUMBER_RE.findall(context_text)}
+    missing = answer_numbers - context_numbers
+    if missing:
+        logger.warning("Grounding failed: numbers not in context: %s", sorted(missing))
+        return False
     prompt = f"CONTEXT:\n{context_text}\n\nANSWER:\n{candidate_answer}"
     result = _call_gemini(
         system_instruction=GROUNDING_SYSTEM,
@@ -136,6 +217,9 @@ def answer_question(clinic_id: str, question_text: str) -> Dict[str, Any]:
         "tokens_in": 0,
         "tokens_out": 0
     }
+
+    if mentions_urgent_symptom(question_text):
+        return {**fallback_res, "answer": EMERGENCY_MESSAGE}
 
     # Step 1: Budget Check
     if _check_daily_budget(clinic_id):
@@ -168,7 +252,7 @@ def answer_question(clinic_id: str, question_text: str) -> Dict[str, Any]:
             # Record lesson use
             with tenant_tx(clinic_id) as conn:
                 with conn.cursor() as cur:
-                    cur.execute("UPDATE lessons SET times_used = times_used + 1 WHERE id = %s;", (lesson["id"],))
+                    cur.execute("UPDATE lessons SET times_used = times_used + 1 WHERE id = %s AND clinic_id = %s;", (lesson["id"], clinic_id))
             return {
                 "answer": lesson["correct_answer"],
                 "kind": "lesson",

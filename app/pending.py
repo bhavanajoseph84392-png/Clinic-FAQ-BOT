@@ -20,9 +20,9 @@ def get_pending_questions(clinic_id: str, status_filter: str = "pending") -> Lis
                        r.reply_text, r.emailed_at, r.email_status, r.added_to_knowledge_item_id
                 FROM questions q
                 LEFT JOIN pending_replies r ON q.id = r.question_id
-                WHERE q.status = %s
+                WHERE q.status = %s AND q.clinic_id = %s
                 ORDER BY q.asked_at DESC;
-            """, (status_filter,))
+            """, (status_filter, clinic_id))
             rows = cur.fetchall()
             return [
                 {
@@ -50,9 +50,9 @@ def reply_to_pending_question(clinic_id: str, question_id: str, reply_text: str)
             cur.execute("""
                 SELECT id, patient_name, patient_email, text, status 
                 FROM questions 
-                WHERE id = %s 
+                WHERE id = %s AND clinic_id = %s
                 FOR UPDATE;
-            """, (question_id,))
+            """, (question_id, clinic_id))
             q = cur.fetchone()
             if not q:
                 raise HTTPException(status_code=404, detail="Question not found")
@@ -84,7 +84,7 @@ def reply_to_pending_question(clinic_id: str, question_id: str, reply_text: str)
             """, (clinic_id, question_id, reply_text, email_status_str))
 
             # Mark question resolved
-            cur.execute("UPDATE questions SET status = 'resolved' WHERE id = %s;", (question_id,))
+            cur.execute("UPDATE questions SET status = 'resolved' WHERE id = %s AND clinic_id = %s;", (question_id, clinic_id))
 
             # Enqueue webhook delivery
             webhook_payload = {
@@ -105,8 +105,8 @@ def add_reply_to_knowledge(clinic_id: str, question_id: str) -> str:
                 SELECT q.text, r.reply_text, r.id, r.added_to_knowledge_item_id
                 FROM questions q
                 JOIN pending_replies r ON q.id = r.question_id
-                WHERE q.id = %s;
-            """, (question_id,))
+                WHERE q.id = %s AND q.clinic_id = %s;
+            """, (question_id, clinic_id))
             row = cur.fetchone()
             if not row:
                 raise HTTPException(status_code=404, detail="Resolved question or reply not found")
@@ -125,7 +125,7 @@ def add_reply_to_knowledge(clinic_id: str, question_id: str) -> str:
             """, (clinic_id, title, body, question_id))
             k_id = cur.fetchone()[0]
 
-            cur.execute("UPDATE pending_replies SET added_to_knowledge_item_id = %s WHERE id = %s;", (k_id, reply_id))
+            cur.execute("UPDATE pending_replies SET added_to_knowledge_item_id = %s WHERE id = %s AND clinic_id = %s;", (k_id, reply_id, clinic_id))
 
             # Enqueue embedding job
             enqueue_job(clinic_id, "process_item", {"item_id": str(k_id)})

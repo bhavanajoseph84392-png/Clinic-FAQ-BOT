@@ -88,7 +88,7 @@ async def ask_endpoint(payload: AskRequest, request: Request, authorization: Opt
         raise HTTPException(status_code=400, detail="Question cannot be empty")
 
     result = answer_question(clinic_id, question_text)
-    is_fallback = (result["answer"] == FALLBACK_MESSAGE)
+    is_fallback = result["kind"] == "fallback" or result["answer"] == FALLBACK_MESSAGE
     q_status = "pending" if is_fallback else "answered"
 
     with tenant_tx(clinic_id) as conn:
@@ -102,13 +102,21 @@ async def ask_endpoint(payload: AskRequest, request: Request, authorization: Opt
 
             cur.execute("""
                 INSERT INTO answers (clinic_id, question_id, text, kind, source_chunk_ids, source_title, lesson_id, confidence, tokens_in, tokens_out)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id;
             """, (
                 clinic_id, qid, result["answer"], result["kind"],
                 result["source_chunk_ids"], result["source_title"],
                 result["lesson_id"], result["confidence"],
                 result["tokens_in"], result["tokens_out"]
             ))
+            answer_id = cur.fetchone()[0]
+
+            if result["kind"] == "lesson" and result["lesson_id"]:
+                cur.execute("""
+                    INSERT INTO lesson_uses (clinic_id, lesson_id, answer_id)
+                    VALUES (%s, %s, %s);
+                """, (clinic_id, result["lesson_id"], answer_id))
 
     return AskResponse(
         answer=result["answer"],
@@ -136,9 +144,9 @@ async def get_questions(
             query = """
                 SELECT id, patient_name, patient_email, source, text, status, asked_at
                 FROM questions
-                WHERE status = %s
+                WHERE status = %s AND clinic_id = %s
             """
-            params = [status]
+            params = [status, clinic_id]
             if cursor:
                 query += " AND asked_at < %s"
                 params.append(cursor)

@@ -101,16 +101,16 @@ def _record_job_failure(job: dict, error: Exception) -> None:
                     cur.execute("""
                         UPDATE jobs 
                         SET status = 'queued', attempts = %s, last_error = %s, run_at = %s 
-                        WHERE id = %s;
-                    """, (attempts, str(error), next_run, job_id))
+                        WHERE id = %s AND clinic_id = %s;
+                    """, (attempts, str(error), next_run, job_id, clinic_id))
         else:
             with tenant_tx(clinic_id) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
                         UPDATE jobs 
                         SET status = 'failed', attempts = %s, last_error = %s 
-                        WHERE id = %s;
-                    """, (attempts, str(error), job_id))
+                        WHERE id = %s AND clinic_id = %s;
+                    """, (attempts, str(error), job_id, clinic_id))
     except Exception as mark_error:
         logger.error(
             f"Could not record failure for job {job_id} ({job_type}): "
@@ -135,7 +135,7 @@ def _execute_job(job: dict):
             emb = get_single_embedding(question_text)
             with tenant_tx(clinic_id) as conn:
                 with conn.cursor() as cur:
-                    cur.execute("UPDATE lessons SET embedding = %s WHERE id = %s;", (emb, lesson_id))
+                    cur.execute("UPDATE lessons SET embedding = %s WHERE id = %s AND clinic_id = %s;", (emb, lesson_id, clinic_id))
                     
         elif job_type == "send_email":
             to_email = payload.get("to_email")
@@ -153,7 +153,7 @@ def _execute_job(job: dict):
         # Mark done
         with tenant_tx(clinic_id) as conn:
             with conn.cursor() as cur:
-                cur.execute("UPDATE jobs SET status = 'done', attempts = %s WHERE id = %s;", (attempts, job_id))
+                cur.execute("UPDATE jobs SET status = 'done', attempts = %s WHERE id = %s AND clinic_id = %s;", (attempts, job_id, clinic_id))
 
     except Exception as e:
         logger.error(f"Job {job_id} ({job_type}) attempt {attempts} failed: {type(e).__name__}: {e}")

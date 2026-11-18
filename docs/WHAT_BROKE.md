@@ -27,3 +27,17 @@ Problem: Stopping the ASGI app or lifespan context occasionally hung waiting for
 Cause: The daemon thread loop was sleeping for 1-2 seconds without joining or checking the termination signal during server teardown.
 Fix: Enhanced `stop_worker()` in `app/jobs.py` to signal `_stop_event.set()` and cleanly join the thread with a 1-second timeout.
 How I checked: Tested repeated startup and teardown sequences cleanly without orphaned background tasks.
+
+## 5. app_user saw empty tables because Supabase auto-enabled RLS on pre-tenant tables
+When: 2026-11-19 Tenant isolation
+Problem: After switching `DATABASE_URL` to `app_user`, admin knowledge pages returned 404 ("Clinic not found") and API rate limiting failed with `new row violates row-level security policy for table "rate_limit_counters"`.
+Cause: Supabase auto-enabled RLS on every new `public` table, including `clinics`, `admin_users`, `rate_limit_counters`, and `schema_migrations`, but only tenant tables had policies. The owner `postgres` had bypassed RLS, hiding the gap.
+Fix: Added `migrations/007_pre_tenant_rls.sql` with a tenant policy on `clinics`, deny-all on `admin_users`, RLS disabled for `rate_limit_counters`/`schema_migrations`, and SECURITY DEFINER `clinic_slug_exists`/`admin_email_exists` helpers used by signup.
+How I checked: Real-DB tests in `tests/test_tenant_isolation_real_db.py` passed for admin, chat, and API isolation.
+
+## 6. `ALTER ROLE app_user ... NOSUPERUSER` was rejected
+When: 2026-11-19 Tenant isolation
+Problem: `psycopg.errors.InsufficientPrivilege: permission denied to alter role` while configuring `app_user`.
+Cause: The Supabase `postgres` role has `CREATEROLE` but is not a superuser, and PostgreSQL forbids a non-superuser from changing the `SUPERUSER` attribute even to `NOSUPERUSER`.
+Fix: `app_user` was already non-superuser and non-BYPASSRLS, so the setup only runs `ALTER ROLE app_user WITH LOGIN PASSWORD ...` (password read from `APP_USER_PASSWORD`).
+How I checked: `SELECT rolname, rolsuper, rolbypassrls` returned `app_user, False, False`.

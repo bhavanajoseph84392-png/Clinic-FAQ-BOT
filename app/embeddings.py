@@ -7,7 +7,9 @@ from app.config import settings
 
 logger = logging.getLogger("clinic_faq.embeddings")
 
-def _deterministic_fallback_embedding(text: str, dim: int = 768) -> List[float]:
+EMBED_DIM = 768
+
+def _deterministic_fallback_embedding(text: str, dim: int = EMBED_DIM) -> List[float]:
     """
     Generates a deterministic normalized 768-dimensional vector based on text token hashes.
     Useful for offline testing when GEMINI_API_KEY is not configured.
@@ -42,7 +44,11 @@ def get_embeddings(texts: List[str], max_retries: int = 3) -> List[List[float]]:
 
     try:
         from google import genai
+        from google.genai import types
         client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        embed_config = None
+        if settings.EMBED_MODEL.startswith("gemini-embedding-"):
+            embed_config = types.EmbedContentConfig(output_dimensionality=EMBED_DIM)
         
         # Batching in chunks of 20
         batch_size = 20
@@ -54,7 +60,8 @@ def get_embeddings(texts: List[str], max_retries: int = 3) -> List[List[float]]:
                 try:
                     response = client.models.embed_content(
                         model=settings.EMBED_MODEL,
-                        contents=batch
+                        contents=batch,
+                        config=embed_config
                     )
                     # response.embeddings is a list of ContentEmbedding objects
                     for emb in response.embeddings:

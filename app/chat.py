@@ -66,7 +66,7 @@ async def handle_patient_message(request: Request, slug: str):
 
     # Run RAG Pipeline
     result = answer_question(clinic_id, question_text)
-    is_fallback = (result["answer"] == FALLBACK_MESSAGE)
+    is_fallback = result["kind"] == "fallback" or result["answer"] == FALLBACK_MESSAGE
 
     question_status = "pending" if is_fallback else "answered"
 
@@ -92,6 +92,12 @@ async def handle_patient_message(request: Request, slug: str):
                 result["tokens_in"], result["tokens_out"]
             ))
             answer_id = cur.fetchone()[0]
+
+            if result["kind"] == "lesson" and result["lesson_id"]:
+                cur.execute("""
+                    INSERT INTO lesson_uses (clinic_id, lesson_id, answer_id)
+                    VALUES (%s, %s, %s);
+                """, (clinic_id, result["lesson_id"], answer_id))
 
     # If fallback, notify clinic contact email
     if is_fallback and clinic.get("contact_email"):

@@ -127,15 +127,15 @@ async def signup_post(
                 # Handle potential slug collisions by suffixing
                 counter = 1
                 while True:
-                    cur.execute("SELECT 1 FROM clinics WHERE slug = %s;", (slug,))
-                    if not cur.fetchone():
+                    cur.execute("SELECT clinic_slug_exists(%s);", (slug,))
+                    if not cur.fetchone()[0]:
                         break
                     slug = f"{base_slug}-{counter}"
                     counter += 1
 
                 # Check if email is already taken
-                cur.execute("SELECT 1 FROM admin_users WHERE email = %s;", (email,))
-                if cur.fetchone():
+                cur.execute("SELECT admin_email_exists(%s);", (email,))
+                if cur.fetchone()[0]:
                     return templates.TemplateResponse("signup.html", {"request": request, "error": "An account with this email already exists."})
 
                 # Create clinic and owner via SECURITY DEFINER SQL function
@@ -218,10 +218,10 @@ async def dashboard(request: Request, admin: dict = Depends(require_admin)):
 
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM knowledge_items;")
+            cur.execute("SELECT COUNT(*) FROM knowledge_items WHERE clinic_id = %s;", (clinic_id,))
             total_knowledge = cur.fetchone()[0]
 
-            cur.execute("SELECT COUNT(*) FROM api_keys WHERE revoked_at IS NULL;")
+            cur.execute("SELECT COUNT(*) FROM api_keys WHERE clinic_id = %s AND revoked_at IS NULL;", (clinic_id,))
             total_keys = cur.fetchone()[0]
 
     stats = {
@@ -257,8 +257,9 @@ async def knowledge_list(request: Request, admin: dict = Depends(require_admin))
             cur.execute("""
                 SELECT id, type, title, body, status, error_message, updated_at 
                 FROM knowledge_items 
+                WHERE clinic_id = %s
                 ORDER BY created_at DESC;
-            """)
+            """, (clinic_id,))
             rows = cur.fetchall()
             items = [
                 {
@@ -355,9 +356,9 @@ async def edit_knowledge(
             cur.execute("""
                 UPDATE knowledge_items
                 SET title = %s, body = %s, status = 'processing', error_message = NULL, updated_at = now()
-                WHERE id = %s
+                WHERE id = %s AND clinic_id = %s
                 RETURNING id;
-            """, (title.strip(), body.strip(), id))
+            """, (title.strip(), body.strip(), id, clinic_id))
             if not cur.fetchone():
                 raise HTTPException(status_code=404, detail="Knowledge item not found")
 
@@ -369,7 +370,7 @@ async def delete_knowledge(id: str, admin: dict = Depends(require_admin)):
     clinic_id = admin["clinic_id"]
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM knowledge_items WHERE id = %s RETURNING id;", (id,))
+            cur.execute("DELETE FROM knowledge_items WHERE id = %s AND clinic_id = %s RETURNING id;", (id, clinic_id))
             if not cur.fetchone():
                 raise HTTPException(status_code=404, detail="Knowledge item not found")
     return RedirectResponse(url="/admin/knowledge", status_code=status.HTTP_303_SEE_OTHER)
@@ -415,9 +416,10 @@ async def answers_page(request: Request, admin: dict = Depends(require_admin)):
                 FROM answers a
                 JOIN questions q ON a.question_id = q.id
                 LEFT JOIN ratings r ON a.id = r.answer_id
+                WHERE a.clinic_id = %s
                 ORDER BY a.created_at DESC
                 LIMIT 30;
-            """)
+            """, (clinic_id,))
             rows = cur.fetchall()
             answers = [
                 {
@@ -465,9 +467,10 @@ async def ask_again_endpoint(request: Request, id: str, admin: dict = Depends(re
                 FROM answers a
                 JOIN questions q ON a.question_id = q.id
                 LEFT JOIN ratings r ON a.id = r.answer_id
+                WHERE a.clinic_id = %s
                 ORDER BY a.created_at DESC
                 LIMIT 30;
-            """)
+            """, (clinic_id,))
             rows = cur.fetchall()
             answers = [
                 {
@@ -561,9 +564,9 @@ async def api_page(request: Request, admin: dict = Depends(require_admin)):
             cur.execute("""
                 SELECT id, name, key_prefix, rate_limit_per_min, created_at, last_used_at
                 FROM api_keys
-                WHERE revoked_at IS NULL
+                WHERE clinic_id = %s AND revoked_at IS NULL
                 ORDER BY created_at DESC;
-            """)
+            """, (clinic_id,))
             rows = cur.fetchall()
             keys = [
                 {
@@ -599,7 +602,7 @@ async def create_api_key_endpoint(
     clinic = _get_admin_clinic(admin)
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, name, key_prefix, rate_limit_per_min, created_at, last_used_at FROM api_keys WHERE revoked_at IS NULL ORDER BY created_at DESC;")
+            cur.execute("SELECT id, name, key_prefix, rate_limit_per_min, created_at, last_used_at FROM api_keys WHERE clinic_id = %s AND revoked_at IS NULL ORDER BY created_at DESC;", (clinic_id,))
             rows = cur.fetchall()
             keys = [{"id": str(r[0]), "name": r[1], "key_prefix": r[2], "rate_limit_per_min": r[3], "created_at": r[4].strftime("%Y-%m-%d %H:%M"), "last_used_at": r[5]} for r in rows]
 
@@ -616,7 +619,7 @@ async def revoke_api_key_endpoint(id: str, admin: dict = Depends(require_admin))
     clinic_id = admin["clinic_id"]
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
-            cur.execute("UPDATE api_keys SET revoked_at = now() WHERE id = %s RETURNING id;", (id,))
+            cur.execute("UPDATE api_keys SET revoked_at = now() WHERE id = %s AND clinic_id = %s RETURNING id;", (id, clinic_id))
             if not cur.fetchone():
                 raise HTTPException(status_code=404, detail="API key not found")
     return RedirectResponse(url="/admin/api", status_code=status.HTTP_303_SEE_OTHER)
@@ -626,7 +629,7 @@ async def revoke_api_key_delete(id: str, admin: dict = Depends(require_admin)):
     clinic_id = admin["clinic_id"]
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
-            cur.execute("UPDATE api_keys SET revoked_at = now() WHERE id = %s RETURNING id;", (id,))
+            cur.execute("UPDATE api_keys SET revoked_at = now() WHERE id = %s AND clinic_id = %s RETURNING id;", (id, clinic_id))
             if not cur.fetchone():
                 raise HTTPException(status_code=404, detail="API key not found")
     return {"success": True}

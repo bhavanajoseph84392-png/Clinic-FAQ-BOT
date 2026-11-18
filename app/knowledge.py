@@ -93,8 +93,8 @@ def process_knowledge_item(clinic_id: str, item_id: str):
             cur.execute("""
                 SELECT id, type, title, body, file_name 
                 FROM knowledge_items 
-                WHERE id = %s;
-            """, (item_id,))
+                WHERE id = %s AND clinic_id = %s;
+            """, (item_id, clinic_id))
             item = cur.fetchone()
             if not item:
                 return
@@ -113,7 +113,7 @@ def process_knowledge_item(clinic_id: str, item_id: str):
                     raise ValueError("No extractable content in item")
                     
                 # Delete old chunks for this item
-                cur.execute("DELETE FROM knowledge_chunks WHERE item_id = %s;", (item_id,))
+                cur.execute("DELETE FROM knowledge_chunks WHERE item_id = %s AND clinic_id = %s;", (item_id, clinic_id))
                 
                 # Generate embeddings
                 embeddings = get_embeddings(chunks)
@@ -128,12 +128,12 @@ def process_knowledge_item(clinic_id: str, item_id: str):
                 cur.execute("""
                     UPDATE knowledge_items 
                     SET status = 'ready', error_message = NULL, updated_at = now() 
-                    WHERE id = %s;
-                """, (item_id,))
+                    WHERE id = %s AND clinic_id = %s;
+                """, (item_id, clinic_id))
             except Exception as e:
                 logger.error(f"Failed to process knowledge item {item_id}: {e}")
                 cur.execute("""
                     UPDATE knowledge_items 
                     SET status = 'failed', error_message = %s, updated_at = now() 
-                    WHERE id = %s;
-                """, (str(e), item_id))
+                    WHERE id = %s AND clinic_id = %s;
+                """, (str(e), item_id, clinic_id))

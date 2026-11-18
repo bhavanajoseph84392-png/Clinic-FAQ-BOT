@@ -20,8 +20,10 @@ class Settings(BaseModel):
     
     # AI Configuration (Gemini)
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-    ANSWER_MODEL: str = os.getenv("ANSWER_MODEL", "gemini-2.5-flash")
-    CHECK_MODEL: str = os.getenv("CHECK_MODEL", "gemini-2.5-flash")
+    NVIDIA_API_KEY: str = os.getenv("NVIDIA_API_KEY", "")
+    NVIDIA_BASE_URL: str = os.getenv("NVIDIA_BASE_URL", "")
+    ANSWER_MODEL: str = os.getenv("ANSWER_MODEL", "gemini-3.5-flash-lite")
+    CHECK_MODEL: str = os.getenv("CHECK_MODEL", "gemini-3.5-flash-lite")
     EMBED_MODEL: str = os.getenv("EMBED_MODEL", "text-embedding-004")
     
     # Email Configuration
