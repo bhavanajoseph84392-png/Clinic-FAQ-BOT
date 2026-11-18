@@ -2,6 +2,7 @@
 .env
 *.env
 !.env.example
+demo_keys.local.txt
 
 # Python
 __pycache__/

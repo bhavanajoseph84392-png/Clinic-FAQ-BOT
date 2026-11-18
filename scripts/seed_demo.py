@@ -14,6 +14,7 @@ from app.api_v1 import generate_clinic_api_key
 from app.config import settings
 
 LOCAL_DATABASE_HOSTS = {"localhost", "127.0.0.1", "::1"}
+DEMO_KEYS_PATH = Path(__file__).resolve().parent.parent / "demo_keys.local.txt"
 
 def database_is_local(db_url: str) -> bool:
     try:
@@ -189,7 +190,8 @@ def seed_demo_data():
 
     # Generate an API key for Sunrise Clinic
     raw_key, prefix = generate_clinic_api_key(clinic_a_id, "Sunrise Mobile App Key")
-    print(f"Generated demo API key for Sunrise Clinic: {raw_key}")
+    DEMO_KEYS_PATH.write_text(raw_key + "\n", encoding="utf-8")
+    print(f"Generated demo API key with prefix {prefix}. Full key saved to {DEMO_KEYS_PATH}.")
     print("Seeding completed successfully.")
 
 if __name__ == "__main__":

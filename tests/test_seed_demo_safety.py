@@ -68,10 +68,11 @@ def test_seed_refuses_non_local_database(monkeypatch):
     assert database_calls == []
 
 
-def test_admin_upsert_does_not_overwrite_existing_password(monkeypatch):
+def test_admin_upsert_does_not_overwrite_existing_password(monkeypatch, tmp_path):
     module = load_seed_module()
     configure_environment(monkeypatch)
     monkeypatch.setattr(module.settings, "DATABASE_URL", "postgresql://localhost/demo")
+    monkeypatch.setattr(module, "DEMO_KEYS_PATH", tmp_path / "demo_keys.local.txt")
 
     executions = []
     counter = [0]
@@ -98,3 +99,40 @@ def test_admin_upsert_does_not_overwrite_existing_password(monkeypatch):
     for sql in admin_inserts:
         assert "ON CONFLICT (email) DO NOTHING" in sql
         assert "password_hash = EXCLUDED.password_hash" not in sql
+
+
+def test_seed_writes_raw_key_to_file_without_printing_it(monkeypatch, capsys, tmp_path):
+    module = load_seed_module()
+    configure_environment(monkeypatch)
+    monkeypatch.setattr(module.settings, "DATABASE_URL", "postgresql://localhost/demo")
+    keys_file = tmp_path / "demo_keys.local.txt"
+    monkeypatch.setattr(module, "DEMO_KEYS_PATH", keys_file)
+
+    executions = []
+    counter = [0]
+    connection = FakeConnection(executions, counter)
+
+    @contextlib.contextmanager
+    def fake_db():
+        yield connection
+
+    @contextlib.contextmanager
+    def fake_tenant_tx(_clinic_id):
+        yield connection
+
+    raw_key = "raw-key-that-must-not-be-printed"
+    prefix = "prefix-123"
+
+    monkeypatch.setattr(module, "get_db", fake_db)
+    monkeypatch.setattr(module, "tenant_tx", fake_tenant_tx)
+    monkeypatch.setattr(module, "process_knowledge_item", lambda *args: None)
+    monkeypatch.setattr(module, "get_single_embedding", lambda _text: [])
+    monkeypatch.setattr(module, "generate_clinic_api_key", lambda *args: (raw_key, prefix))
+
+    module.seed_demo_data()
+
+    captured = capsys.readouterr()
+    assert raw_key not in captured.out
+    assert prefix in captured.out
+    assert "Full key saved to" in captured.out
+    assert keys_file.read_text(encoding="utf-8").strip() == raw_key
