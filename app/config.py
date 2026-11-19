@@ -14,7 +14,7 @@ def _require_env(name: str) -> str:
 
 class Settings(BaseModel):
     DATABASE_URL: str = _require_env("DATABASE_URL")
-    MIGRATION_DATABASE_URL: str = _require_env("MIGRATION_DATABASE_URL")
+    MIGRATION_DATABASE_URL: str = os.getenv("MIGRATION_DATABASE_URL", "")
     SECRET_KEY: str = _require_env("SECRET_KEY")
     COOKIE_SECURE: bool = os.getenv("COOKIE_SECURE", "true").lower() in ("1", "true", "yes", "on")
     

@@ -12,7 +12,12 @@ load_dotenv()
 MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
 
 def run_migrations():
-    missing = [name for name in ("MIGRATION_DATABASE_URL", "APP_USER_PASSWORD") if not os.getenv(name)]
+    db_url = os.getenv("MIGRATION_DATABASE_URL", "")
+    if not db_url:
+        print("MIGRATION_DATABASE_URL is required to run migrations", file=sys.stderr)
+        return False
+
+    missing = [name for name in ("APP_USER_PASSWORD",) if not os.getenv(name)]
     if missing:
         print(f"[MIGRATION NOTICE] Missing required environment variables: {', '.join(missing)}")
         print("Please set them in .env before executing migrations.")
@@ -23,7 +28,6 @@ def run_migrations():
         print(f"Migration error: no migration files found in {MIGRATIONS_DIR}", file=sys.stderr)
         return False
 
-    db_url = os.environ["MIGRATION_DATABASE_URL"]
     app_user_password = os.environ["APP_USER_PASSWORD"]
 
     print(f"Connecting to database for migrations...")
