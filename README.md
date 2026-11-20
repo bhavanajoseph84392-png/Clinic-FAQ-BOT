@@ -260,6 +260,4 @@ pytest
 
 ---
 
-## 7. API Documentation
-Interactive OpenAPI / Swagger documentation is available at `/docs` when running the application.
 
