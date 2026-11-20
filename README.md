@@ -15,7 +15,7 @@ A multi-tenant healthcare SaaS platform enabling clinics to offer an AI-powered 
   - **Classification & Grounding Verification**: Google Gemini 2.5 Flash (`gemini-2.5-flash`)
   - **Vector Embeddings**: Gemini `text-embedding-004` (768 dimensions)
 - **Document Processing**: `pypdf` for text extraction with scanned PDF detection
-- **Email Delivery**: Resend API with Gmail SMTP fallback behind a single unified interface
+- **Email Delivery**: Brevo HTTPS API in production (`EMAIL_PROVIDER=brevo`, because Render blocks outbound SMTP). `app/emailer.py` also supports Resend and SMTP as alternatives behind one `send_email()` interface, selected by `EMAIL_PROVIDER`.
 - **Deployment Target**: Render Web Service + Managed PostgreSQL (or Neon/Supabase)
 
 ---
@@ -216,6 +216,12 @@ Every tenant-scoped table contains `clinic_id uuid NOT NULL REFERENCES clinics(i
 
 ---
 
+## 4a. Rating and Learning Rules
+- **Patient ratings are feedback only.** A patient's Good/Bad rating is stored in `ratings` with a `session_id`. It never changes the knowledge base and never creates a lesson.
+- **Only a clinic admin's Bad rating with a corrected answer updates the knowledge base.** That creates an enabled lesson, which is embedded and used by lesson-first retrieval (Section 5, step 3).
+
+---
+
 ## 5. RAG Answer Pipeline & Safety Rules
 1. **Budget Check**: If clinic daily AI budget (`DAILY_AI_BUDGET_PER_CLINIC`) is exceeded, trigger fallback immediately.
 2. **Intent Classification**: Gemini classifies input into `faq`, `medical`, `smalltalk`, `abuse`.
@@ -257,4 +263,3 @@ pytest
 ## 7. API Documentation
 Interactive OpenAPI / Swagger documentation is available at `/docs` when running the application.
 
-See [docs/WHAT_BROKE.md](file:///c:/Business%20Labs%20Project/docs/WHAT_BROKE.md) for incident logs and fixes.
