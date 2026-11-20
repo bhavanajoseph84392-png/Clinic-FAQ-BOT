@@ -33,7 +33,7 @@ def rate_answer(clinic_id: str, answer_id: str, value: str, correct_answer: Opti
             cur.execute("""
                 INSERT INTO ratings (clinic_id, answer_id, value, correct_answer, comment)
                 VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (answer_id) DO UPDATE 
+                ON CONFLICT (answer_id) WHERE session_id IS NULL DO UPDATE
                 SET value = EXCLUDED.value, correct_answer = EXCLUDED.correct_answer, comment = EXCLUDED.comment, rated_at = now()
                 RETURNING id;
             """, (clinic_id, answer_id, value, correct_answer, comment))

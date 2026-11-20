@@ -412,10 +412,18 @@ async def answers_page(request: Request, admin: dict = Depends(require_admin)):
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT a.id, a.text, a.kind, a.source_title, a.created_at, q.text, r.value
+                SELECT a.id, a.text, a.kind, a.source_title, a.created_at, q.text,
+                       rt.admin_rating, rt.patient_good, rt.patient_bad
                 FROM answers a
                 JOIN questions q ON a.question_id = q.id
-                LEFT JOIN ratings r ON a.id = r.answer_id
+                LEFT JOIN LATERAL (
+                    SELECT
+                        max(r.value) FILTER (WHERE r.session_id IS NULL) AS admin_rating,
+                        count(*) FILTER (WHERE r.session_id IS NOT NULL AND r.value = 'good') AS patient_good,
+                        count(*) FILTER (WHERE r.session_id IS NOT NULL AND r.value = 'bad') AS patient_bad
+                    FROM ratings r
+                    WHERE r.clinic_id = a.clinic_id AND r.answer_id = a.id
+                ) rt ON true
                 WHERE a.clinic_id = %s
                 ORDER BY a.created_at DESC
                 LIMIT 30;
@@ -429,7 +437,9 @@ async def answers_page(request: Request, admin: dict = Depends(require_admin)):
                     "source_title": r[3],
                     "created_at": r[4].strftime("%Y-%m-%d %H:%M") if r[4] else "",
                     "question_text": r[5],
-                    "rating": r[6]
+                    "rating": r[6],
+                    "patient_good": r[7],
+                    "patient_bad": r[8]
                 }
                 for r in rows
             ]
@@ -463,10 +473,18 @@ async def ask_again_endpoint(request: Request, id: str, admin: dict = Depends(re
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT a.id, a.text, a.kind, a.source_title, a.created_at, q.text, r.value
+                SELECT a.id, a.text, a.kind, a.source_title, a.created_at, q.text,
+                       rt.admin_rating, rt.patient_good, rt.patient_bad
                 FROM answers a
                 JOIN questions q ON a.question_id = q.id
-                LEFT JOIN ratings r ON a.id = r.answer_id
+                LEFT JOIN LATERAL (
+                    SELECT
+                        max(r.value) FILTER (WHERE r.session_id IS NULL) AS admin_rating,
+                        count(*) FILTER (WHERE r.session_id IS NOT NULL AND r.value = 'good') AS patient_good,
+                        count(*) FILTER (WHERE r.session_id IS NOT NULL AND r.value = 'bad') AS patient_bad
+                    FROM ratings r
+                    WHERE r.clinic_id = a.clinic_id AND r.answer_id = a.id
+                ) rt ON true
                 WHERE a.clinic_id = %s
                 ORDER BY a.created_at DESC
                 LIMIT 30;
@@ -480,7 +498,9 @@ async def ask_again_endpoint(request: Request, id: str, admin: dict = Depends(re
                     "source_title": r[3],
                     "created_at": r[4].strftime("%Y-%m-%d %H:%M") if r[4] else "",
                     "question_text": r[5],
-                    "rating": r[6]
+                    "rating": r[6],
+                    "patient_good": r[7],
+                    "patient_bad": r[8]
                 }
                 for r in rows
             ]

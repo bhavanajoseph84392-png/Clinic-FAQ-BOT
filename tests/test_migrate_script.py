@@ -79,6 +79,27 @@ def test_migrations_use_script_relative_path_and_transactions(monkeypatch, tmp_p
     assert connection.transactions >= len(inserted) + 1
 
 
+def test_rollback_files_are_not_applied_by_deploy(monkeypatch, tmp_path):
+    module = load_migrate_module()
+    connection = FakeConnection()
+    monkeypatch.setattr(module.psycopg, "connect", lambda *args, **kwargs: connection)
+    monkeypatch.setattr(module, "MIGRATIONS_DIR", tmp_path)
+    configure_environment(monkeypatch)
+
+    (tmp_path / "001_forward.sql").write_text("SELECT 1;", encoding="utf-8")
+    (tmp_path / "001_forward_rollback.sql").write_text("SELECT 2;", encoding="utf-8")
+
+    assert module.run_migrations() is True
+
+    inserted = [
+        params[0]
+        for sql, params in connection.executions
+        if "INSERT INTO schema_migrations" in sql
+    ]
+    assert "001_forward.sql" in inserted
+    assert "001_forward_rollback.sql" not in inserted
+
+
 def test_alter_role_uses_literal_password_not_bound_parameter(monkeypatch, tmp_path):
     module = load_migrate_module()
     connection = FakeConnection()

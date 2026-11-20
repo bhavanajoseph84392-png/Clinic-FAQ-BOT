@@ -56,6 +56,9 @@
             {% if item.rating %}
               <span class="badge badge-{{ item.rating }}">{{ item.rating }} rating</span>
             {% endif %}
+            {% if item.patient_good or item.patient_bad %}
+              <span class="badge" style="background: var(--slate-200); color: var(--slate-700);">Patients: {{ item.patient_good }} good / {{ item.patient_bad }} bad</span>
+            {% endif %}
           </div>
         </div>
 

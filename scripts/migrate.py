@@ -23,7 +23,11 @@ def run_migrations():
         print("Please set them in .env before executing migrations.")
         return False
 
-    migration_files = sorted(MIGRATIONS_DIR.glob("*.sql"))
+    migration_files = sorted(
+        mf
+        for mf in MIGRATIONS_DIR.glob("*.sql")
+        if not mf.name.endswith("_rollback.sql")
+    )
     if not migration_files:
         print(f"Migration error: no migration files found in {MIGRATIONS_DIR}", file=sys.stderr)
         return False

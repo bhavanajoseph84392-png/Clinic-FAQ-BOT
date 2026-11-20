@@ -42,7 +42,27 @@
     const sendBtn = document.getElementById('sendBtn');
     const slug = "{{ clinic.slug }}";
 
-    function appendMessage(text, isUser, sourceTitle) {
+    async function submitRating(answerId, value, ratingBar) {
+      const buttons = ratingBar.querySelectorAll('button');
+      buttons.forEach((button) => { button.disabled = true; });
+
+      try {
+        const response = await fetch(`/c/${slug}/answers/${answerId}/rating`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value })
+        });
+        if (!response.ok) throw new Error('Rating failed');
+        const thanks = await response.text();
+        ratingBar.textContent = thanks || 'Thanks';
+        ratingBar.style.fontSize = '0.8rem';
+        ratingBar.style.color = 'var(--slate-500)';
+      } catch (err) {
+        buttons.forEach((button) => { button.disabled = false; });
+      }
+    }
+
+    function appendMessage(text, isUser, sourceTitle, answerId, kind) {
       const bubble = document.createElement('div');
       bubble.className = isUser ? 'chat-bubble chat-bubble-user' : 'chat-bubble chat-bubble-bot';
       bubble.textContent = text;
@@ -52,6 +72,26 @@
         sourceSpan.className = 'chat-source-tag';
         sourceSpan.textContent = 'Source: ' + sourceTitle;
         bubble.appendChild(sourceSpan);
+      }
+
+      if (!isUser && answerId && kind !== 'fallback') {
+        const ratingBar = document.createElement('div');
+        ratingBar.style.display = 'flex';
+        ratingBar.style.gap = '0.5rem';
+        ratingBar.style.marginTop = '0.5rem';
+
+        const makeRatingButton = (label, value) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'btn btn-secondary btn-sm';
+          button.textContent = label;
+          button.addEventListener('click', () => submitRating(answerId, value, ratingBar));
+          return button;
+        };
+
+        ratingBar.appendChild(makeRatingButton('Good', 'good'));
+        ratingBar.appendChild(makeRatingButton('Bad', 'bad'));
+        bubble.appendChild(ratingBar);
       }
       
       messagesBox.appendChild(bubble);
@@ -86,7 +126,7 @@
         
         if (response.ok) {
           const data = await response.json();
-          appendMessage(data.text, false, data.source);
+          appendMessage(data.text, false, data.source, data.answer_id, data.kind);
         } else {
           appendMessage("Thank you! The clinic will reply to you soon by email.", false, "Clinic Escalation");
         }

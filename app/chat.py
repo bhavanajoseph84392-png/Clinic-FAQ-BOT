@@ -118,3 +118,51 @@ async def handle_patient_message(request: Request, slug: str):
         "kind": result["kind"],
         "source": result["source_title"]
     })
+
+@router.post("/c/{slug}/answers/{answer_id}/rating")
+async def submit_patient_rating(request: Request, slug: str, answer_id: str):
+    clinic, session = resolve_patient_session(request, slug)
+    clinic_id = session["clinic_id"]
+    session_id = session["id"]
+
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        data = await request.json()
+        value = str(data.get("value", "")).strip().lower()
+        comment = data.get("comment")
+    else:
+        form = await request.form()
+        value = str(form.get("value", "")).strip().lower()
+        comment = form.get("comment")
+
+    if value not in ("good", "bad"):
+        raise HTTPException(status_code=400, detail="Rating value must be 'good' or 'bad'")
+
+    comment = comment.strip() if isinstance(comment, str) and comment.strip() else None
+    if value == "bad" and not comment:
+        comment = "Patient marked this answer as not helpful"
+
+    with tenant_tx(clinic_id) as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT a.id
+                FROM answers a
+                JOIN questions q ON q.id = a.question_id
+                JOIN patient_sessions ps ON ps.id = q.session_id
+                WHERE a.id = %s
+                  AND a.clinic_id = %s
+                  AND q.clinic_id = %s
+                  AND ps.id = %s
+                  AND ps.clinic_id = %s
+                  AND a.kind <> 'fallback';
+            """, (answer_id, clinic_id, clinic_id, session_id, clinic_id))
+            if not cur.fetchone():
+                raise HTTPException(status_code=404, detail="Answer not found")
+
+            cur.execute("""
+                INSERT INTO ratings (clinic_id, answer_id, session_id, value, comment)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (answer_id, session_id) WHERE session_id IS NOT NULL DO NOTHING;
+            """, (clinic_id, answer_id, session_id, value, comment))
+
+    return HTMLResponse("Thanks")
