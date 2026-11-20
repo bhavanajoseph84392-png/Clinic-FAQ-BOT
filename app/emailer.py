@@ -3,13 +3,16 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
+
+import httpx
+
 from app.config import settings
 
 logger = logging.getLogger("clinic_faq.emailer")
 
 def send_email(to_email: str, subject: str, html_body: str, text_body: Optional[str] = None) -> bool:
     """
-    Sends email using either Resend or SMTP based on settings.EMAIL_PROVIDER.
+    Sends email using Resend, Brevo, or SMTP based on settings.EMAIL_PROVIDER.
     Returns True if delivery succeeded, False otherwise.
     """
     if not to_email:
@@ -48,7 +51,49 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: Optional[
         except Exception as e:
             logger.error(f"Error sending email via Resend: {e}")
             return False
-            
+
+    elif provider == "brevo":
+        if not settings.BREVO_API_KEY or not settings.MAIL_FROM:
+            logger.warning("Email provider is not configured; no email was sent.")
+            return False
+
+        payload = {
+            "sender": {"email": settings.MAIL_FROM},
+            "to": [{"email": to_email}],
+            "subject": subject,
+            "htmlContent": html_body,
+        }
+        if text_body:
+            payload["textContent"] = text_body
+
+        try:
+            response = httpx.post(
+                "https://api.brevo.com/v3/smtp/email",
+                headers={
+                    "api-key": settings.BREVO_API_KEY,
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=10.0,
+            )
+        except Exception as e:
+            logger.error(f"Error sending email via Brevo: {type(e).__name__}: {e}")
+            return False
+
+        if 200 <= response.status_code < 300:
+            logger.info(f"Email delivered via Brevo with status {response.status_code}")
+            return True
+
+        try:
+            error_message = str(response.json().get("message", ""))
+        except Exception:
+            error_message = ""
+        for sensitive in (to_email, html_body, text_body):
+            if sensitive:
+                error_message = error_message.replace(sensitive, "[redacted]")
+        logger.error(f"Brevo returned status {response.status_code}: {error_message}")
+        return False
+
     elif provider == "smtp":
         try:
             if not settings.SMTP_USER or not settings.SMTP_PASSWORD:

@@ -45,3 +45,8 @@ node_modules/
 Thumbs.db
 
 opencode.json
+docs/WHAT_BROKE.md
+docs/What_Broke_and_How_I_Fixed.pdf
+docs/WHAT_BROKE_SIMPLE.pdf
+docs/PROJECT_AND_FIXES.pdf
+docs/fixes/

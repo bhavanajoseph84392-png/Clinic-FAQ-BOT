@@ -29,6 +29,7 @@ class Settings(BaseModel):
     # Email Configuration
     EMAIL_PROVIDER: str = os.getenv("EMAIL_PROVIDER", "resend")
     RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+    BREVO_API_KEY: str = os.getenv("BREVO_API_KEY", "")
     MAIL_FROM: str = os.getenv("MAIL_FROM", "onboarding@resend.dev")
     SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
