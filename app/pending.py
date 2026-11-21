@@ -1,8 +1,8 @@
 import logging
+from datetime import datetime, timezone
 from html import escape
 from typing import Dict, Any, List, Optional
-from fastapi import APIRouter, Request, HTTPException, Form, Depends, status
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi import APIRouter, HTTPException  # pyright: ignore[reportMissingImports]
 from app.auth import require_admin
 from app.db import tenant_tx
 from app.validation import is_valid_email
@@ -11,6 +11,16 @@ from app.emailer import send_email
 
 logger = logging.getLogger("clinic_faq.pending")
 router = APIRouter(prefix="/admin/pending")
+
+
+def format_wait(hours: float) -> str:
+    if hours < 1:
+        return f"{int(hours * 60)} min"
+    if hours < 48:
+        return f"{int(hours)} hours"
+    days = int(hours // 24)
+    return f"{days} day" if days == 1 else f"{days} days"
+
 
 def get_pending_questions(clinic_id: str, status_filter: str = "pending") -> List[Dict[str, Any]]:
     with tenant_tx(clinic_id) as conn:
@@ -21,9 +31,10 @@ def get_pending_questions(clinic_id: str, status_filter: str = "pending") -> Lis
                 FROM questions q
                 LEFT JOIN pending_replies r ON q.id = r.question_id
                 WHERE q.status = %s AND q.clinic_id = %s
-                ORDER BY q.asked_at DESC;
+                ORDER BY q.asked_at ASC;
             """, (status_filter, clinic_id))
             rows = cur.fetchall()
+            now = datetime.now(timezone.utc)
             return [
                 {
                     "id": str(r[0]),
@@ -32,6 +43,9 @@ def get_pending_questions(clinic_id: str, status_filter: str = "pending") -> Lis
                     "text": r[3],
                     "status": r[4],
                     "asked_at": r[5].strftime("%Y-%m-%d %H:%M:%S") if r[5] else "",
+                    "hours_waiting": round((now - r[5]).total_seconds() / 3600, 1) if r[5] else 0,
+                    "wait_label": format_wait((now - r[5]).total_seconds() / 3600) if r[5] else "",
+                    "is_overdue": bool(r[5]) and (now - r[5]).total_seconds() > 24 * 3600,
                     "reply_text": r[6],
                     "emailed_at": r[7].strftime("%Y-%m-%d %H:%M:%S") if r[7] else None,
                     "email_status": r[8],
@@ -39,6 +53,7 @@ def get_pending_questions(clinic_id: str, status_filter: str = "pending") -> Lis
                 }
                 for r in rows
             ]
+
 
 def reply_to_pending_question(clinic_id: str, question_id: str, reply_text: str) -> Dict[str, Any]:
     reply_text = reply_text.strip()
@@ -48,15 +63,15 @@ def reply_to_pending_question(clinic_id: str, question_id: str, reply_text: str)
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT id, patient_name, patient_email, text, status 
-                FROM questions 
+                SELECT id, patient_name, patient_email, text, status
+                FROM questions
                 WHERE id = %s AND clinic_id = %s
                 FOR UPDATE;
             """, (question_id, clinic_id))
             q = cur.fetchone()
             if not q:
                 raise HTTPException(status_code=404, detail="Question not found")
-                
+
             qid, p_name, p_email, q_text, q_status = q
             if q_status == "resolved":
                 # Idempotency check: already resolved
@@ -98,6 +113,7 @@ def reply_to_pending_question(clinic_id: str, question_id: str, reply_text: str)
 
             return {"success": True, "email_delivered": email_sent}
 
+
 def add_reply_to_knowledge(clinic_id: str, question_id: str) -> str:
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
@@ -110,7 +126,7 @@ def add_reply_to_knowledge(clinic_id: str, question_id: str) -> str:
             row = cur.fetchone()
             if not row:
                 raise HTTPException(status_code=404, detail="Resolved question or reply not found")
-                
+
             q_text, r_text, reply_id, existing_k_id = row
             if existing_k_id:
                 return str(existing_k_id)

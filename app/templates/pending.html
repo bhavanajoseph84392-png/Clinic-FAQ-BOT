@@ -21,7 +21,7 @@
           <div>
             <span style="font-weight: 700; color: var(--slate-900); font-size: 1rem;">{{ q.patient_name }}</span>
             <span style="color: var(--slate-500); font-size: 0.85rem;">({{ q.patient_email }})</span>
-            <div style="font-size: 0.8rem; color: var(--slate-400); margin-top: 0.15rem;">Received: {{ q.asked_at }}</div>
+            <div style="font-size: 0.8rem; color: var(--slate-400); margin-top: 0.15rem;">Received: {{ q.asked_at }}{% if q.status == 'pending' %} &bull; <span {% if q.is_overdue %}style="color:#dc2626;font-weight:600"{% endif %}>Waiting {{ q.wait_label }}</span>{% endif %}</div>
           </div>
           <span class="badge badge-{{ q.status }}">{{ q.status }}</span>
         </div>
