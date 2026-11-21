@@ -263,3 +263,8 @@ pytest
 ---
 
 
+
+## 7. Documentation
+- [Fix log](docs/fixes/INDEX.md)
+- [What broke and how I fixed it](docs/fixes/What_Broke_and_How_I_Fixed.pdf)
+- Interactive API documentation is at `/docs` when the app is running.
