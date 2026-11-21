@@ -20,9 +20,9 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: ANSWER_MODEL
-        value: gemini-2.5-flash
+        value: gemini-3.5-flash-lite
       - key: CHECK_MODEL
-        value: gemini-2.5-flash
+        value: gemini-3.5-flash-lite
       - key: EMBED_MODEL
         value: text-embedding-004
       - key: EMAIL_PROVIDER
