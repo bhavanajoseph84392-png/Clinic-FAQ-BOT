@@ -11,8 +11,8 @@ A multi-tenant healthcare SaaS platform enabling clinics to offer an AI-powered 
 - **Database Access & Tenant Security**: `psycopg 3` with connection pooling and PostgreSQL Row-Level Security (RLS) driven by transaction-scoped `app.clinic_id`
 - **Password Hashing**: `argon2-cffi`
 - **AI Models**:
-  - **Answer Generation**: Google Gemini 2.5 Flash (`gemini-2.5-flash`) via `google-genai` SDK — fast, cost-effective (<$0.01/answer), with strict grounding verification
-  - **Classification & Grounding Verification**: Google Gemini 2.5 Flash (`gemini-2.5-flash`)
+  - **Answer Generation**: Google Gemini 3.5 Flash Lite  (`gemini-3.5-flash lite`) via `google-genai` SDK — fast, cost-effective (<$0.01/answer), with strict grounding verification
+  - **Classification & Grounding Verification**: Google Gemini 3.5 Flash Lite (`gemini-3.5-flash lite`)
   - **Vector Embeddings**: Gemini `text-embedding-004` (768 dimensions)
 - **Document Processing**: `pypdf` for text extraction with scanned PDF detection
 - **Email Delivery**: Brevo HTTPS API in production (`EMAIL_PROVIDER=brevo`, because Render blocks outbound SMTP). `app/emailer.py` also supports Resend and SMTP as alternatives behind one `send_email()` interface, selected by `EMAIL_PROVIDER`.
@@ -21,9 +21,9 @@ A multi-tenant healthcare SaaS platform enabling clinics to offer an AI-powered 
 ---
 
 ## 2. Selected AI Models
-- **Answer Model**: `gemini-2.5-flash`
+- **Answer Model**: `gemini-3.5-flash lite`
   - *Rationale*: Sub-second latency, low token cost (<$0.001 per FAQ query), large context window, and high compliance with system instructions and negative constraints.
-- **Check / Grounding Model**: `gemini-2.5-flash`
+- **Check / Grounding Model**: `gemini-3.5-flash lite`
   - *Rationale*: Accurately classifies user intent (faq, medical, smalltalk, abuse) and inspects answers against retrieved context to prevent hallucinated prices, doctor availability, or medical advice.
 - **Embedding Model**: `text-embedding-004`
   - *Rationale*: High retrieval precision across medical and operational vocabulary, natively outputting 768-dimensional vectors aligned with our PostgreSQL pgvector schema.
