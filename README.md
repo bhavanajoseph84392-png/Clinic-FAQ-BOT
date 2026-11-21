@@ -125,11 +125,13 @@ Every tenant-scoped table contains `clinic_id uuid NOT NULL REFERENCES clinics(i
 9. **`ratings`**
    - `id` (uuid, PRIMARY KEY)
    - `clinic_id` (uuid, NOT NULL REFERENCES clinics(id))
-   - `answer_id` (uuid NOT NULL UNIQUE REFERENCES answers(id))
+   - `answer_id` (uuid NOT NULL REFERENCES answers(id))
+   - `session_id` (uuid REFERENCES patient_sessions(id) ON DELETE CASCADE)
    - `value` (text, NOT NULL CHECK ('good', 'bad'))
    - `correct_answer` (text)
    - `comment` (text)
    - `rated_at` (timestamptz, NOT NULL DEFAULT now())
+   - Unique rules: one admin rating per answer (`uq_ratings_admin_answer`, where `session_id IS NULL`), and one patient rating per answer per session (`uq_ratings_patient_answer_session`).
 
 10. **`lessons`**
     - `id` (uuid, PRIMARY KEY)
