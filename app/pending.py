@@ -16,7 +16,7 @@ router = APIRouter(prefix="/admin/pending")
 def format_wait(hours: float) -> str:
     if hours < 1:
         return f"{int(hours * 60)} min"
-    if hours < 48:
+    if hours < 24:
         return f"{int(hours)} hours"
     days = int(hours // 24)
     return f"{days} day" if days == 1 else f"{days} days"
