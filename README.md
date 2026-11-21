@@ -22,7 +22,7 @@ A multi-tenant healthcare SaaS platform enabling clinics to offer an AI-powered 
 
 ## 2. Selected AI Models
 - **Answer Model**: `gemini-3.5-flash-lite`
-  - *Rationale*: Sub-second latency, low token cost (<$0.001 per FAQ query), large context window, and high compliance with system instructions and negative constraints.
+  - *Rationale*: Sub-second latency, low token cost (<$0.01 per FAQ query), large context window, and high compliance with system instructions and negative constraints.
 - **Check / Grounding Model**: `gemini-3.5-flash-lite`
   - *Rationale*: Accurately classifies user intent (faq, medical, smalltalk, abuse) and inspects answers against retrieved context to prevent hallucinated prices, doctor availability, or medical advice.
 - **Embedding Model**: `text-embedding-004`
