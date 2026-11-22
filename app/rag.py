@@ -1,7 +1,10 @@
 import re
 import logging
-import httpx
+from pathlib import Path
 from typing import Dict, Any, List, Optional
+
+import httpx
+
 from app.config import settings
 from app.db import tenant_tx
 from app.prompts import (
@@ -15,49 +18,39 @@ from app.search import search_lessons, hybrid_search
 
 logger = logging.getLogger("clinic_faq.rag")
 
-EMERGENCY_MESSAGE = (
-    "If this is an emergency, please call 112 or go to the nearest hospital now. "
-    "The clinic will also reply to you by email."
+URGENT_TERMS_FILE = Path(__file__).resolve().parent.parent / "config" / "urgent_terms.txt"
+
+
+def _load_urgent_terms() -> tuple:
+    lines = URGENT_TERMS_FILE.read_text(encoding="utf-8").splitlines()
+    return tuple(
+        line.strip().lower()
+        for line in lines
+        if line.strip() and not line.strip().startswith("#")
+    )
+
+
+URGENT_SYMPTOM_KEYWORDS = _load_urgent_terms()
+
+EMERGENCY_BASE = (
+    "This may be an emergency. Please call your local emergency number or go to the nearest hospital now."
 )
 
-URGENT_SYMPTOM_KEYWORDS = (
-    "chest pain",
-    "chest tightness",
-    "pressure in my chest",
-    "trouble breathing",
-    "difficulty breathing",
-    "can't breathe",
-    "cannot breathe",
-    "shortness of breath",
-    "short of breath",
-    "severe bleeding",
-    "heavy bleeding",
-    "bleeding heavily",
-    "bleeding a lot",
-    "fainting",
-    "fainted",
-    "passed out",
-    "unconscious",
-    "signs of a stroke",
-    "numbness on one side",
-    "sudden numbness",
-    "think i'm having a stroke",
-    "having a stroke",
-    "face drooping",
-    "slurred speech",
-    "sudden weakness",
-    "suicidal",
-    "suicide",
-    "kill myself",
-    "end my life",
-    "want to die",
-    "self-harm",
-    "self harm",
-)
+
+def build_emergency_message(clinic_id: str) -> str:
+    with tenant_tx(clinic_id) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT phone FROM clinics WHERE id = %s;", (clinic_id,))
+            row = cur.fetchone()
+    if row and row[0]:
+        return f"{EMERGENCY_BASE} You can also call the clinic at {row[0]}."
+    return f"{EMERGENCY_BASE} You can also contact the clinic directly."
+
 
 def mentions_urgent_symptom(text: str) -> bool:
     lowered = (text or "").lower().replace("\u2019", "'")
     return any(keyword in lowered for keyword in URGENT_SYMPTOM_KEYWORDS)
+
 
 def _check_daily_budget(clinic_id: str) -> bool:
     """Checks if clinic has exceeded DAILY_AI_BUDGET_PER_CLINIC for today."""
@@ -70,6 +63,7 @@ def _check_daily_budget(clinic_id: str) -> bool:
             row = cur.fetchone()
             count = row[0] if row else 0
             return count >= settings.DAILY_AI_BUDGET_PER_CLINIC
+
 
 def _call_gemini(system_instruction: str, user_prompt: str, model_name: str) -> str:
     """Invokes the configured chat provider with the prompt and system instruction."""
@@ -105,12 +99,12 @@ def _call_gemini(system_instruction: str, user_prompt: str, model_name: str) -> 
     if not settings.GEMINI_API_KEY or settings.GEMINI_API_KEY.startswith("your_"):
         # Deterministic simulation for tests/offline
         return _simulate_llm_response(system_instruction, user_prompt)
-        
+
     try:
         from google import genai
         from google.genai import types
         client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        
+
         response = client.models.generate_content(
             model=model_name,
             contents=user_prompt,
@@ -123,6 +117,7 @@ def _call_gemini(system_instruction: str, user_prompt: str, model_name: str) -> 
     except Exception as e:
         logger.error("Gemini API call failed: %s", type(e).__name__)
         return ""
+
 
 def _simulate_llm_response(system_instruction: str, user_prompt: str) -> str:
     """Simulated responses for offline / CI / unit testing environments."""
@@ -140,11 +135,11 @@ def _simulate_llm_response(system_instruction: str, user_prompt: str) -> str:
         if any(w in low for w in ["ignore all", "system prompt", "hack", "bypass", "drop table", "swear"]):
             return "abuse"
         return "faq"
-        
+
     if "GROUNDING_SYSTEM" in system_instruction or "Reply PASS only" in system_instruction:
         # Check if numbers or key words in answer are present in context
         return "PASS"
-        
+
     # Answer generation simulation
     if "CONTEXT:" in user_prompt:
         context_part = user_prompt.split("CONTEXT:")[1].split("QUESTION:")[0].strip()
@@ -152,8 +147,9 @@ def _simulate_llm_response(system_instruction: str, user_prompt: str) -> str:
         if lines:
             return f"Based on clinic information: {lines[0]}"
         return "NO_ANSWER"
-        
+
     return "NO_ANSWER"
+
 
 def classify_message(question: str) -> str:
     """Classifies user question into: faq, medical, smalltalk, abuse."""
@@ -166,7 +162,7 @@ def classify_message(question: str) -> str:
     except Exception:
         logger.warning("Message classification failed; using safe fallback route.")
         return "medical"
-    
+
     if "medical" in classification:
         return "medical"
     elif "smalltalk" in classification:
@@ -178,7 +174,10 @@ def classify_message(question: str) -> str:
     else:
         return "medical"
 
+
 _NUMBER_RE = re.compile(r"\d+")
+
+
 def verify_grounding(context_text: str, candidate_answer: str) -> bool:
     """Strict check: every number in the answer must appear in the context, then the model must say PASS."""
     answer_numbers = {int(n) for n in _NUMBER_RE.findall(candidate_answer)}
@@ -195,9 +194,11 @@ def verify_grounding(context_text: str, candidate_answer: str) -> bool:
     ).strip().upper()
     return result == "PASS"
 
+
 def answer_question(clinic_id: str, question_text: str) -> Dict[str, Any]:
     """
     Core RAG pipeline:
+    0. Urgent symptom check (returns emergency message, no AI call)
     1. Budget check
     2. Classify (faq, medical, smalltalk, abuse)
     3. Lessons first (sim >= LESSON_THRESHOLD)
@@ -218,8 +219,9 @@ def answer_question(clinic_id: str, question_text: str) -> Dict[str, Any]:
         "tokens_out": 0
     }
 
+    # Step 0: Urgent check comes first, so emergencies never reach the AI
     if mentions_urgent_symptom(question_text):
-        return {**fallback_res, "answer": EMERGENCY_MESSAGE}
+        return {**fallback_res, "answer": build_emergency_message(clinic_id)}
 
     # Step 1: Budget Check
     if _check_daily_budget(clinic_id):
@@ -252,7 +254,10 @@ def answer_question(clinic_id: str, question_text: str) -> Dict[str, Any]:
             # Record lesson use
             with tenant_tx(clinic_id) as conn:
                 with conn.cursor() as cur:
-                    cur.execute("UPDATE lessons SET times_used = times_used + 1 WHERE id = %s AND clinic_id = %s;", (lesson["id"], clinic_id))
+                    cur.execute(
+                        "UPDATE lessons SET times_used = times_used + 1 WHERE id = %s AND clinic_id = %s;",
+                        (lesson["id"], clinic_id),
+                    )
             return {
                 "answer": lesson["correct_answer"],
                 "kind": "lesson",
@@ -268,7 +273,7 @@ def answer_question(clinic_id: str, question_text: str) -> Dict[str, Any]:
 
     # Step 4: Hybrid Knowledge Search
     chunks, best_similarity = hybrid_search(clinic_id, question_text, top_k=5)
-    
+
     # Step 5: Knowledge Threshold Check
     if not chunks or best_similarity < settings.KNOWLEDGE_THRESHOLD:
         logger.info(f"Similarity {best_similarity} below threshold {settings.KNOWLEDGE_THRESHOLD}")
@@ -278,15 +283,15 @@ def answer_question(clinic_id: str, question_text: str) -> Dict[str, Any]:
     context_passages = []
     chunk_ids = []
     top_title = chunks[0]["title"] if chunks else "Clinic Knowledge Base"
-    
+
     for idx, c in enumerate(chunks, start=1):
         context_passages.append(f"[{idx}] {c['content']}")
         chunk_ids.append(c["id"])
-        
+
     full_context = "\n\n".join(context_passages)
     if lesson_hint:
         full_context += lesson_hint
-        
+
     user_prompt = ANSWER_USER.format(context=full_context, question=question_text)
     raw_answer = _call_gemini(
         system_instruction=ANSWER_SYSTEM,
