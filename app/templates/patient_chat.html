@@ -28,6 +28,8 @@
       </div>
     </div>
 
+    <div id="suggestionsBox" style="display:flex;flex-wrap:wrap;gap:0.5rem;padding:0.5rem 1rem;"></div>
+
     <!-- Message Input Bar -->
     <form id="chatForm" class="chat-input-bar">
       <input type="text" id="questionInput" class="form-control" placeholder="Ask a question about our clinic..." autocomplete="off" required>
@@ -67,10 +69,10 @@
       bubble.className = isUser ? 'chat-bubble chat-bubble-user' : 'chat-bubble chat-bubble-bot';
       bubble.textContent = text;
       
-      if (!isUser && sourceTitle) {
+      if (!isUser) {
         const sourceSpan = document.createElement('div');
         sourceSpan.className = 'chat-source-tag';
-        sourceSpan.textContent = 'Source: ' + sourceTitle;
+        sourceSpan.textContent = 'Source: ' + (sourceTitle || 'Clinic team');
         bubble.appendChild(sourceSpan);
       }
 
@@ -98,16 +100,13 @@
       messagesBox.scrollTop = messagesBox.scrollHeight;
     }
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const question = input.value.trim();
+    async function sendQuestion(question) {
       if (!question) return;
 
       appendMessage(question, true);
       input.value = '';
       sendBtn.disabled = true;
 
-      // Loading bubble
       const loadingBubble = document.createElement('div');
       loadingBubble.className = 'chat-bubble chat-bubble-bot';
       loadingBubble.textContent = 'Checking clinic information...';
@@ -121,23 +120,48 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: question })
         });
-        
+
         loadingBubble.remove();
-        
+
         if (response.ok) {
           const data = await response.json();
           appendMessage(data.text, false, data.source, data.answer_id, data.kind);
         } else {
-          appendMessage("Thank you! The clinic will reply to you soon by email.", false, "Clinic Escalation");
+          appendMessage("Thank you! The clinic will reply to you soon by email.", false);
         }
       } catch (err) {
         loadingBubble.remove();
-        appendMessage("Thank you! The clinic will reply to you soon by email.", false, "Clinic Escalation");
+        appendMessage("Thank you! The clinic will reply to you soon by email.", false);
       } finally {
         sendBtn.disabled = false;
         input.focus();
       }
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      sendQuestion(input.value.trim());
     });
+
+    async function loadSuggestions() {
+      try {
+        const response = await fetch(`/c/${slug}/suggestions`);
+        if (!response.ok) return;
+        const data = await response.json();
+        const box = document.getElementById('suggestionsBox');
+        (data.suggestions || []).forEach((text) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'btn btn-secondary btn-sm';
+          button.textContent = text;
+          button.addEventListener('click', () => sendQuestion(text));
+          box.appendChild(button);
+        });
+      } catch (err) {
+        return;
+      }
+    }
+    loadSuggestions();
   </script>
 </body>
 </html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skin 3 - Answers</title>
+<style>
+  :root{--bg:#0f172a;--panel:#1e293b;--primary:#f59e0b;--accent:#38bdf8;--ink:#f8fafc;--muted:#94a3b8;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,sans-serif}
+  .top{background:var(--panel);border-bottom:2px solid var(--primary);padding:1rem}
+  .brand{font-family:Georgia,serif;color:var(--primary)}
+  .layout{display:block}
+  main{padding:1rem}
+  h1{font-family:Georgia,serif;color:var(--primary);margin:0 0 1rem}
+  .answer{background:var(--panel);border:1px solid #334155;padding:1rem;margin-bottom:1rem}
+  .q{font-weight:bold}
+  .a{margin:.6rem 0;padding:.7rem;background:#0b1220;border-left:3px solid var(--accent)}
+  .src{font-size:.75rem;color:var(--muted)}
+  .btn{min-height:44px;background:transparent;border:1px solid var(--primary);color:var(--primary);padding:.5rem .9rem;margin:.5rem .25rem 0 0}
+  @media(min-width:768px){
+    .layout{display:flex}
+    nav{width:240px;background:var(--panel);padding:1rem;display:flex;flex-direction:column;gap:.3rem;min-height:100vh;border-right:2px solid var(--primary)}
+    nav a{min-height:44px;display:flex;align-items:center;padding:.6rem;text-decoration:none;color:var(--ink)}
+    nav a:hover,nav a.active{background:#334155;color:var(--primary)}
+    main{flex:1;padding:2rem}
+    .answer{padding:1.5rem}
+  }
+</style>
+</head>
+<body>
+<div class="top"><span class="brand">City Care / Skin 3</span></div>
+<div class="layout">
+  <nav>
+    <a href="#">Dashboard</a><a href="#">Pending</a><a href="#">Analytics</a>
+    <a class="active" href="#">Answers</a><a href="#">Knowledge</a><a href="#">Settings</a>
+  </nav>
+  <main>
+    <h1>Answer log</h1>
+    <div class="answer">
+      <div class="q">What is the consultation fee?</div>
+      <div class="a">A standard consultation is 500 rupees.</div>
+      <div class="src">Source: Fee schedule</div>
+      <div><button class="btn">Good</button><button class="btn">Bad</button><button class="btn">Ask again</button></div>
+    </div>
+    <div class="answer">
+      <div class="q">Where can I park?</div>
+      <div class="a">Free parking is available behind the clinic.</div>
+      <div class="src">Source: Clinic team</div>
+      <div><button class="btn">Good</button><button class="btn">Bad</button><button class="btn">Ask again</button></div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

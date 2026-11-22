@@ -3,6 +3,7 @@ from typing import Dict, Any, List, Optional
 from app.db import tenant_tx
 from app.jobs import enqueue_job
 from app.rag import answer_question
+from app.privacy import mask_contacts
 
 logger = logging.getLogger("clinic_faq.learning")
 
@@ -26,7 +27,7 @@ def rate_answer(clinic_id: str, answer_id: str, value: str, correct_answer: Opti
             ans_row = cur.fetchone()
             if not ans_row:
                 raise ValueError("Answer not found")
-                
+
             aid, bad_ans_text, q_text, q_id = ans_row
 
             # Upsert rating
@@ -106,7 +107,7 @@ def ask_again(clinic_id: str, old_answer_id: str) -> Dict[str, Any]:
             row = cur.fetchone()
             if not row:
                 raise ValueError("Original answer not found")
-                
+
             aid, old_text, old_kind, old_source, old_lesson, qid, q_text = row
 
     # Rerun answer pipeline
@@ -133,7 +134,7 @@ def ask_again(clinic_id: str, old_answer_id: str) -> Dict[str, Any]:
                 """, (clinic_id, new_result["lesson_id"], new_ans_id))
 
     return {
-        "question": q_text,
+        "question": mask_contacts(q_text),
         "old_answer": {
             "id": str(aid),
             "text": old_text,
@@ -150,6 +151,11 @@ def ask_again(clinic_id: str, old_answer_id: str) -> Dict[str, Any]:
             "lesson_used": new_result["kind"] == "lesson" or new_result["lesson_id"] is not None
         }
     }
+
+
+def format_top_unanswered(rows):
+    return [{"question": mask_contacts(r[0]), "count": r[1]} for r in rows]
+
 
 def get_analytics(clinic_id: str) -> Dict[str, Any]:
     with tenant_tx(clinic_id) as conn:
@@ -193,6 +199,18 @@ def get_analytics(clinic_id: str) -> Dict[str, Any]:
             cur.execute("SELECT COUNT(*) FROM lessons WHERE clinic_id = %s;", (clinic_id,))
             total_lessons = cur.fetchone()[0]
 
+            # Top 5 questions that went to Pending in the last 30 days
+            cur.execute("""
+                SELECT MIN(q.text) AS question, count(DISTINCT q.id) AS asks
+                FROM questions q
+                JOIN answers a ON a.question_id = q.id AND a.kind = 'fallback'
+                WHERE q.clinic_id = %s AND q.asked_at >= now() - interval '30 days'
+                GROUP BY lower(q.text)
+                ORDER BY asks DESC
+                LIMIT 5;
+            """, (clinic_id,))
+            top_unanswered = format_top_unanswered(cur.fetchall())
+
             cur.execute("SELECT coalesce(SUM(times_used), 0) FROM lessons WHERE clinic_id = %s;", (clinic_id,))
             total_lessons_used = cur.fetchone()[0]
 
@@ -231,5 +249,6 @@ def get_analytics(clinic_id: str) -> Dict[str, Any]:
             "total_lessons": total_lessons,
             "total_lessons_used": total_lessons_used
         },
-        "weekly_data": weekly_data
+        "weekly_data": weekly_data,
+        "top_unanswered": top_unanswered
     }

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skin 2 - Analytics</title>
+<style>
+  :root{--bg:#f4f7ff;--primary:#4f46e5;--accent:#06b6d4;--ink:#1e293b;--muted:#64748b;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+  .top{background:#fff;padding:1rem;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap}
+  .brand{font-weight:800;color:var(--primary)}
+  .btn{min-height:44px;border:0;border-radius:999px;padding:.6rem 1rem;background:var(--primary);color:#fff;font-size:1rem}
+  .layout{display:block}
+  main{padding:1rem}
+  h1{font-size:1.3rem;margin:0 0 1rem}
+  .stats{display:grid;grid-template-columns:1fr;gap:1rem}
+  .stat{background:#fff;border-radius:18px;padding:1rem;box-shadow:0 10px 25px rgba(79,70,229,.08)}
+  .stat b{display:block;font-size:1.8rem;color:var(--primary)}
+  .stat span{color:var(--muted);font-size:.8rem;text-transform:uppercase}
+  .card{background:#fff;border-radius:18px;padding:1rem;box-shadow:0 10px 25px rgba(79,70,229,.08);margin-top:1rem}
+  .bar{height:10px;background:#e0e7ff;border-radius:99px;overflow:hidden;margin:.4rem 0 1rem}
+  .bar i{display:block;height:100%;background:var(--accent)}
+  @media(min-width:768px){
+    .layout{display:flex}
+    nav{width:220px;background:#fff;padding:1rem;display:flex;flex-direction:column;gap:.35rem;min-height:100vh}
+    nav a{min-height:44px;display:flex;align-items:center;padding:.6rem .8rem;border-radius:12px;text-decoration:none;color:var(--ink)}
+    nav a.active,nav a:hover{background:#e0e7ff;color:var(--primary)}
+    main{flex:1;padding:2rem}
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .stat{padding:1.5rem}
+    .card{padding:1.5rem}
+  }
+  @media(min-width:1024px){ .stats{grid-template-columns:repeat(4,1fr)} }
+</style>
+</head>
+<body>
+<div class="top"><span class="brand">ClinicFAQ / Skin 2</span><button class="btn">Download CSV</button></div>
+<div class="layout">
+  <nav>
+    <a href="#">Dashboard</a><a href="#">Pending</a><a class="active" href="#">Analytics</a>
+    <a href="#">Answers</a><a href="#">Knowledge</a><a href="#">Settings</a>
+  </nav>
+  <main>
+    <h1>Quality analytics</h1>
+    <div class="stats">
+      <div class="stat"><b>94%</b><span>Good ratings</span></div>
+      <div class="stat"><b>18</b><span>Bot answers</span></div>
+      <div class="stat"><b>6</b><span>Pending</span></div>
+      <div class="stat"><b>3</b><span>Lessons used</span></div>
+    </div>
+    <div class="card">
+      <h2>Top unanswered questions</h2>
+      <p>Opening hours <strong>5</strong></p><div class="bar"><i style="width:100%"></i></div>
+      <p>Parking <strong>3</strong></p><div class="bar"><i style="width:60%"></i></div>
+      <p>Consultation fee <strong>2</strong></p><div class="bar"><i style="width:40%"></i></div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

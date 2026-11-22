@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skin 3 - Patient Chat</title>
+<style>
+  :root{--bg:#0f172a;--panel:#1e293b;--primary:#f59e0b;--accent:#38bdf8;--ink:#f8fafc;--muted:#94a3b8;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Georgia,serif;background:var(--bg);color:var(--ink)}
+  .wrap{max-width:760px;margin:0 auto;padding:1rem}
+  header{border:2px solid var(--primary);padding:1rem 1.25rem;margin-bottom:1rem}
+  header h1{margin:0;font-size:1.4rem;color:var(--primary)}
+  .chat{background:var(--panel);border:1px solid #334155}
+  .messages{padding:1rem;height:58vh;overflow:auto;display:flex;flex-direction:column;gap:.8rem}
+  .bubble{max-width:88%;padding:.85rem 1rem;font-family:system-ui,sans-serif;font-size:.95rem;border-left:4px solid var(--accent)}
+  .bot{background:#0b1220;align-self:flex-start}
+  .user{background:#243449;align-self:flex-end;border-left-color:var(--primary)}
+  .source{font-size:.72rem;color:var(--muted);margin-top:.4rem}
+  .chips{display:flex;flex-wrap:wrap;gap:.5rem;padding:0 1rem 1rem}
+  .chip,.send{min-height:44px;border:1px solid var(--primary);background:transparent;color:var(--primary);padding:.5rem .9rem;font-size:1rem;font-family:system-ui,sans-serif}
+  .send{background:var(--primary);color:#111827;font-weight:bold}
+  .inputbar{display:flex;gap:.5rem;padding:1rem;border-top:1px solid #334155}
+  .inputbar input{flex:1;min-width:0;font-size:16px;min-height:44px;background:#0b1220;border:1px solid #475569;color:var(--ink);padding:.6rem}
+  @media(min-width:768px){ .wrap{padding:2rem;} .messages{height:64vh;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>City Care Clinic</h1><small>Patient assistant - Skin 3</small></header>
+  <div class="chat">
+    <div class="messages">
+      <div class="bubble bot">Good day. Ask me about clinic services.<div class="source">Source: City Care FAQ</div></div>
+      <div class="bubble user">What is the consultation fee?</div>
+      <div class="bubble bot">A standard consultation is 500 rupees.<div class="source">Source: Fee schedule</div></div>
+    </div>
+    <div class="chips">
+      <button class="chip">Fees</button><button class="chip">Timings</button><button class="chip">Doctors</button>
+    </div>
+    <form class="inputbar" onsubmit="return false">
+      <input aria-label="Message" placeholder="Type your question">
+      <button class="send" type="submit">Send</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

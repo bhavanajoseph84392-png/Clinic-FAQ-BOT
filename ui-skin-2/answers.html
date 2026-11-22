@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skin 2 - Answers</title>
+<style>
+  :root{--bg:#f4f7ff;--primary:#4f46e5;--muted:#64748b;--ink:#1e293b;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+  .top{background:#fff;padding:1rem;border-bottom:1px solid #e2e8f0}
+  .brand{font-weight:800;color:var(--primary)}
+  .layout{display:block}
+  main{padding:1rem}
+  h1{font-size:1.3rem;margin:0 0 1rem}
+  .answer{background:#fff;border-radius:18px;padding:1rem;margin-bottom:1rem;box-shadow:0 10px 25px rgba(79,70,229,.08)}
+  .q{font-weight:700}
+  .a{margin:.6rem 0;padding:.7rem;background:#eef2ff;border-radius:12px}
+  .src{font-size:.75rem;color:var(--muted)}
+  .acts{display:flex;gap:.5rem;flex-wrap:wrap}
+  .btn{min-height:44px;border:0;border-radius:999px;padding:.5rem 1rem;background:#e0e7ff;color:var(--primary);font-size:1rem}
+  @media(min-width:768px){
+    .layout{display:flex}
+    nav{width:220px;background:#fff;padding:1rem;display:flex;flex-direction:column;gap:.35rem;min-height:100vh}
+    nav a{min-height:44px;display:flex;align-items:center;padding:.6rem .8rem;border-radius:12px;text-decoration:none;color:var(--ink)}
+    nav a.active,nav a:hover{background:#e0e7ff;color:var(--primary)}
+    main{flex:1;padding:2rem}
+    .answer{padding:1.5rem}
+  }
+</style>
+</head>
+<body>
+<div class="top"><span class="brand">ClinicFAQ / Skin 2</span></div>
+<div class="layout">
+  <nav>
+    <a href="#">Dashboard</a><a href="#">Pending</a><a href="#">Analytics</a>
+    <a class="active" href="#">Answers</a><a href="#">Knowledge</a><a href="#">Settings</a>
+  </nav>
+  <main>
+    <h1>Recent chatbot answers</h1>
+    <div class="answer">
+      <div class="q">What are your opening hours?</div>
+      <div class="a">We are open Monday to Friday, 9 AM to 6 PM.</div>
+      <div class="src">Source: Clinic timings</div>
+      <div class="acts"><button class="btn">Good</button><button class="btn">Bad</button><button class="btn">Ask again</button></div>
+    </div>
+    <div class="answer">
+      <div class="q">Do you have parking?</div>
+      <div class="a">Free patient parking is behind the building.</div>
+      <div class="src">Source: Clinic team</div>
+      <div class="acts"><button class="btn">Good</button><button class="btn">Bad</button><button class="btn">Ask again</button></div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

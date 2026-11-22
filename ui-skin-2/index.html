@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skin 2 - Patient Chat</title>
+<style>
+  :root { --bg:#f4f7ff; --primary:#4f46e5; --accent:#06b6d4; --ink:#1e293b; --muted:#64748b; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Inter,system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+  .wrap { max-width:720px; margin:0 auto; padding:1rem; }
+  header { background:var(--primary); color:#fff; padding:1rem 1.25rem; border-radius:18px 18px 0 0; }
+  header h1 { margin:0; font-size:1.15rem; }
+  .chat { background:#fff; border-radius:0 0 18px 18px; box-shadow:0 12px 30px rgba(79,70,229,.12); overflow:hidden; }
+  .messages { padding:1rem; height:60vh; overflow:auto; display:flex; flex-direction:column; gap:.75rem; }
+  .bubble { padding:.8rem 1rem; border-radius:16px; max-width:88%; font-size:.95rem; }
+  .bot { background:#eef2ff; align-self:flex-start; }
+  .user { background:var(--primary); color:#fff; align-self:flex-end; }
+  .source { font-size:.72rem; color:var(--muted); margin-top:.4rem; }
+  .chips { display:flex; flex-wrap:wrap; gap:.5rem; padding:0 1rem 1rem; }
+  .chip,.send { min-height:44px; border:0; border-radius:999px; padding:.6rem 1rem; font-size:1rem; }
+  .chip { background:#e0e7ff; color:var(--primary); }
+  .send { background:var(--accent); color:#fff; font-weight:700; }
+  .inputbar { display:flex; gap:.5rem; padding:1rem; border-top:1px solid #e2e8f0; }
+  .inputbar input { flex:1; min-width:0; font-size:16px; min-height:44px; border:1px solid #cbd5e1; border-radius:12px; padding:.6rem .8rem; }
+  @media (min-width:768px){ .wrap{padding:2rem;} .messages{height:65vh;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Sunrise Clinic Assistant</h1><small>Patient FAQ demo - Skin 2</small></header>
+  <div class="chat">
+    <div class="messages">
+      <div class="bubble bot">Hello Priya! How can I help you today?<div class="source">Source: Sunrise FAQ Guide</div></div>
+      <div class="bubble user">What are your opening hours?</div>
+      <div class="bubble bot">We are open Monday to Friday, 9 AM to 6 PM.<div class="source">Source: Clinic timings</div></div>
+    </div>
+    <div class="chips">
+      <button class="chip">Opening hours</button>
+      <button class="chip">Parking</button>
+      <button class="chip">Consultation fee</button>
+    </div>
+    <form class="inputbar" onsubmit="return false">
+      <input aria-label="Message" placeholder="Ask a question...">
+      <button class="send" type="submit">Send</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ clinic.name }} - Patient Assistant</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="auth-page" style="background: linear-gradient(135deg, #f0fdfa 0%, #e2e8f0 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.25rem;">
+  <div class="auth-card" style="max-width: 440px; width: 100%; background: #ffffff; border-radius: 1rem; border: 1px solid var(--slate-200); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08); padding: 1.75rem;">
+    <div style="text-align: center; margin-bottom: 1.25rem;">
+      <div style="display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; background: var(--primary-light); color: var(--primary); border-radius: 0.75rem; margin-bottom: 0.75rem;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M2 12h20"/></svg>
+      </div>
+      <h2 style="font-size: 1.35rem; font-weight: 700; color: var(--slate-900);">{{ clinic.name }}</h2>
+      <p style="font-size: 0.85rem; color: var(--slate-500); margin-top: 0.25rem;">Patient FAQ & Information Assistant</p>
+    </div>
+
+    <form method="POST" action="/embed/{{ clinic.slug }}/session">
+      <div class="form-group">
+        <label class="form-label" for="name">Your Name</label>
+        <input type="text" id="name" name="name" class="form-control" placeholder="e.g. Jane Doe" required autofocus>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">Your Email Address</label>
+        <input type="email" id="email" name="email" class="form-control" placeholder="jane@example.com" required>
+        <small style="color: var(--slate-500); display: block; margin-top: 0.35rem;">
+          We use this to follow up by email if your question requires clinic staff attention.
+        </small>
+      </div>
+
+      <p style="font-size: 0.75rem; color: var(--slate-400); margin-bottom: 1rem; line-height: 1.4;">
+        🔒 <em>Privacy Note: Your contact details and session remain confidential to this clinic and are never shared.</em>
+      </p>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem;">Start Conversation &rarr;</button>
+    </form>
+  </div>
+</body>
+</html>

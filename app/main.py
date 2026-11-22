@@ -1,5 +1,8 @@
 import re
 import os
+import csv
+import io
+from datetime import datetime
 from contextlib import asynccontextmanager
 from typing import Optional
 from fastapi import FastAPI, Request, Form, UploadFile, File, HTTPException, Depends, status, Response
@@ -20,6 +23,8 @@ from app.pending import get_pending_questions, reply_to_pending_question, add_re
 from app.learning import rate_answer, list_lessons, toggle_lesson, delete_lesson, ask_again, get_analytics
 from app.api_v1 import router as api_router, generate_clinic_api_key
 from app.chat import router as chat_router
+from app.embed import router as embed_router
+from app.privacy import mask_contacts
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -46,13 +51,19 @@ templates = Jinja2Templates(directory="app/templates")
 # Mount API & Chat Routers
 app.include_router(api_router)
 app.include_router(chat_router)
+app.include_router(embed_router)
 
 # Security Headers Middleware
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    if re.fullmatch(r"/embed/[^/]+", request.url.path):
+        if "X-Frame-Options" in response.headers:
+            del response.headers["X-Frame-Options"]
+        response.headers["Content-Security-Policy"] = "frame-ancestors *"
+    else:
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
@@ -255,8 +266,8 @@ async def knowledge_list(request: Request, admin: dict = Depends(require_admin))
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT id, type, title, body, status, error_message, updated_at 
-                FROM knowledge_items 
+                SELECT id, type, title, body, status, error_message, updated_at, is_locked
+                FROM knowledge_items
                 WHERE clinic_id = %s
                 ORDER BY created_at DESC;
             """, (clinic_id,))
@@ -269,7 +280,8 @@ async def knowledge_list(request: Request, admin: dict = Depends(require_admin))
                     "body": r[3],
                     "status": r[4],
                     "error_message": r[5],
-                    "updated_at": r[6].strftime("%Y-%m-%d %H:%M") if r[6] else ""
+                    "updated_at": r[6].strftime("%Y-%m-%d %H:%M") if r[6] else "",
+                    "is_locked": bool(r[7])
                 }
                 for r in rows
             ]
@@ -285,16 +297,17 @@ async def knowledge_list(request: Request, admin: dict = Depends(require_admin))
 async def add_text_knowledge(
     title: str = Form(...),
     body: str = Form(...),
+    is_locked: str = Form(""),
     admin: dict = Depends(require_admin)
 ):
     clinic_id = admin["clinic_id"]
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO knowledge_items (clinic_id, type, title, body, status)
-                VALUES (%s, 'text', %s, %s, 'processing')
+                INSERT INTO knowledge_items (clinic_id, type, title, body, status, is_locked)
+                VALUES (%s, 'text', %s, %s, 'processing', %s)
                 RETURNING id;
-            """, (clinic_id, title.strip(), body.strip()))
+            """, (clinic_id, title.strip(), body.strip(), is_locked == "on"))
             item_id = cur.fetchone()[0]
 
     enqueue_job(clinic_id, "process_item", {"item_id": str(item_id)})
@@ -348,6 +361,7 @@ async def edit_knowledge(
     id: str,
     title: str = Form(...),
     body: str = Form(...),
+    is_locked: str = Form(""),
     admin: dict = Depends(require_admin)
 ):
     clinic_id = admin["clinic_id"]
@@ -355,10 +369,11 @@ async def edit_knowledge(
         with conn.cursor() as cur:
             cur.execute("""
                 UPDATE knowledge_items
-                SET title = %s, body = %s, status = 'processing', error_message = NULL, updated_at = now()
+                SET title = %s, body = %s, status = 'processing', error_message = NULL, updated_at = now(),
+                    is_locked = %s
                 WHERE id = %s AND clinic_id = %s
                 RETURNING id;
-            """, (title.strip(), body.strip(), id, clinic_id))
+            """, (title.strip(), body.strip(), is_locked == "on", id, clinic_id))
             if not cur.fetchone():
                 raise HTTPException(status_code=404, detail="Knowledge item not found")
 
@@ -390,10 +405,101 @@ async def pending_page(request: Request, status: str = "pending", admin: dict = 
         "active_page": "pending"
     })
 
+
+@app.get("/admin/pending.csv")
+async def pending_csv(status: str = "pending", admin: dict = Depends(require_admin)):
+    questions = get_pending_questions(admin["clinic_id"], status_filter=status)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Question", "Patient", "Email", "Status", "Asked At", "Repeat Count"])
+    for question in questions:
+        writer.writerow([
+            question["text"], question["patient_name"], question["patient_email"],
+            question["status"], question["asked_at"], question["times_asked"],
+        ])
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="pending.csv"'},
+    )
+
+
+@app.get("/admin/settings", response_class=HTMLResponse)
+async def clinic_settings_page(request: Request, saved: str = "", admin: dict = Depends(require_admin)):
+    clinic = _get_admin_clinic(admin)
+    clinic_id = clinic["id"]
+    with tenant_tx(clinic_id) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT phone, emergency_number, opening_time, closing_time FROM clinics WHERE id = %s;",
+                (clinic_id,),
+            )
+            phone, emergency_number, opening_time, closing_time = cur.fetchone()
+    embed_script = (
+        f'<script src="{settings.APP_BASE_URL.rstrip("/")}/embed.js" '
+        f'data-clinic="{clinic["slug"]}" async></script>'
+    )
+    return templates.TemplateResponse("settings.html", {
+        "request": request,
+        "clinic": clinic,
+        "phone": phone,
+        "emergency_number": emergency_number,
+        "opening_time": opening_time.strftime("%H:%M") if opening_time else "",
+        "closing_time": closing_time.strftime("%H:%M") if closing_time else "",
+        "embed_script": embed_script,
+        "saved": saved == "1",
+        "active_page": "settings",
+    })
+
+
+@app.post("/admin/settings")
+async def save_clinic_settings(
+    phone: str = Form(""),
+    emergency_number: str = Form(""),
+    opening_time: str = Form(""),
+    closing_time: str = Form(""),
+    admin: dict = Depends(require_admin),
+):
+    clinic = _get_admin_clinic(admin)
+    clinic_id = clinic["id"]
+    phone = phone.strip() or None
+    emergency_number = emergency_number.strip() or None
+    if phone and len(phone) > 30:
+        raise HTTPException(status_code=400, detail="Phone number is too long.")
+    if emergency_number and len(emergency_number) > 20:
+        raise HTTPException(status_code=400, detail="Emergency number is too long.")
+
+    parsed_opening = None
+    parsed_closing = None
+    if opening_time:
+        try:
+            parsed_opening = datetime.strptime(opening_time, "%H:%M").time()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Opening time must be in HH:MM format.")
+    if closing_time:
+        try:
+            parsed_closing = datetime.strptime(closing_time, "%H:%M").time()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Closing time must be in HH:MM format.")
+
+    with tenant_tx(clinic_id) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE clinics SET phone = %s, emergency_number = %s, opening_time = %s, closing_time = %s WHERE id = %s;",
+                (phone, emergency_number, parsed_opening, parsed_closing, clinic_id),
+            )
+    return RedirectResponse(url="/admin/settings?saved=1", status_code=status.HTTP_303_SEE_OTHER)
 @app.post("/admin/pending/{id}/reply")
-async def reply_pending(id: str, reply_text: str = Form(...), admin: dict = Depends(require_admin)):
+async def reply_pending(
+    id: str,
+    reply_text: str = Form(...),
+    save_as_faq: str = Form(""),
+    admin: dict = Depends(require_admin),
+):
     clinic_id = admin["clinic_id"]
     reply_to_pending_question(clinic_id, id, reply_text)
+    if save_as_faq == "on":
+        add_reply_to_knowledge(clinic_id, id)
     return RedirectResponse(url="/admin/pending?status=resolved", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/admin/pending/{id}/to-knowledge")
@@ -436,7 +542,7 @@ async def answers_page(request: Request, admin: dict = Depends(require_admin)):
                     "kind": r[2],
                     "source_title": r[3],
                     "created_at": r[4].strftime("%Y-%m-%d %H:%M") if r[4] else "",
-                    "question_text": r[5],
+                    "question_text": mask_contacts(r[5]),
                     "rating": r[6],
                     "patient_good": r[7],
                     "patient_bad": r[8]
@@ -497,7 +603,7 @@ async def ask_again_endpoint(request: Request, id: str, admin: dict = Depends(re
                     "kind": r[2],
                     "source_title": r[3],
                     "created_at": r[4].strftime("%Y-%m-%d %H:%M") if r[4] else "",
-                    "question_text": r[5],
+                    "question_text": mask_contacts(r[5]),
                     "rating": r[6],
                     "patient_good": r[7],
                     "patient_bad": r[8]
@@ -571,6 +677,24 @@ async def analytics_page(request: Request, admin: dict = Depends(require_admin))
         "analytics": data,
         "active_page": "analytics"
     })
+
+
+@app.get("/admin/analytics.csv")
+async def analytics_csv(admin: dict = Depends(require_admin)):
+    data = get_analytics(admin["clinic_id"])
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Section", "Label", "Value"])
+    for key, value in data["summary"].items():
+        writer.writerow(["Summary", key, value])
+    for item in data["top_unanswered"]:
+        writer.writerow(["Top unanswered", item["question"], item["count"]])
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="analytics.csv"'},
+    )
+
 
 # ----------------- API Keys & Webhooks -----------------
 

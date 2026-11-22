@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skin 3 - Analytics</title>
+<style>
+  :root{--bg:#0f172a;--panel:#1e293b;--primary:#f59e0b;--accent:#38bdf8;--ink:#f8fafc;--muted:#94a3b8;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,sans-serif}
+  .top{background:var(--panel);border-bottom:2px solid var(--primary);padding:1rem;display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap}
+  .brand{font-family:Georgia,serif;color:var(--primary)}
+  .btn{min-height:44px;background:var(--primary);border:0;color:#111827;padding:.55rem 1rem;font-weight:bold}
+  .layout{display:block}
+  main{padding:1rem}
+  h1{font-family:Georgia,serif;color:var(--primary);margin:0 0 1rem}
+  .stats{display:grid;grid-template-columns:1fr;gap:1rem}
+  .stat{background:var(--panel);border-top:3px solid var(--accent);padding:1rem}
+  .stat b{font-family:Georgia,serif;font-size:2rem;color:var(--primary);display:block}
+  .stat span{color:var(--muted);font-size:.8rem;text-transform:uppercase}
+  .card{background:var(--panel);padding:1rem;margin-top:1rem;border:1px solid #334155}
+  .meter{height:8px;background:#334155;margin:.3rem 0 1rem}
+  .meter i{display:block;height:100%;background:var(--accent)}
+  @media(min-width:768px){
+    .layout{display:flex}
+    nav{width:240px;background:var(--panel);padding:1rem;display:flex;flex-direction:column;gap:.3rem;min-height:100vh;border-right:2px solid var(--primary)}
+    nav a{min-height:44px;display:flex;align-items:center;padding:.6rem;text-decoration:none;color:var(--ink)}
+    nav a:hover,nav a.active{background:#334155;color:var(--primary)}
+    main{flex:1;padding:2rem}
+    .stats{grid-template-columns:repeat(2,1fr)}
+  }
+  @media(min-width:1024px){ .stats{grid-template-columns:repeat(4,1fr)} }
+</style>
+</head>
+<body>
+<div class="top"><span class="brand">City Care / Skin 3</span><button class="btn">Download CSV</button></div>
+<div class="layout">
+  <nav>
+    <a href="#">Dashboard</a><a href="#">Pending</a><a class="active" href="#">Analytics</a>
+    <a href="#">Answers</a><a href="#">Knowledge</a><a href="#">Settings</a>
+  </nav>
+  <main>
+    <h1>Weekly quality report</h1>
+    <div class="stats">
+      <div class="stat"><b>87%</b><span>Good ratings</span></div>
+      <div class="stat"><b>42</b><span>Bot answers</span></div>
+      <div class="stat"><b>11</b><span>Pending</span></div>
+      <div class="stat"><b>7</b><span>Urgent</span></div>
+    </div>
+    <div class="card">
+      <h2>Top unanswered questions</h2>
+      <p>Fee schedule <strong>6</strong></p><div class="meter"><i style="width:100%"></i></div>
+      <p>Parking <strong>4</strong></p><div class="meter"><i style="width:66%"></i></div>
+      <p>Sunday opening <strong>2</strong></p><div class="meter"><i style="width:33%"></i></div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

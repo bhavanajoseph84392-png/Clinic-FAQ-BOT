@@ -4,6 +4,10 @@
 {% block header_title %}Weekly Quality & Improvement Analytics{% endblock %}
 
 {% block content %}
+<div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+  <a href="/admin/analytics.csv" class="btn btn-secondary btn-sm">Download CSV</a>
+</div>
+
 <!-- Overview KPI Cards -->
 <div class="grid-cols-4">
   <div class="stat-card" style="border-top: 4px solid var(--success);">
@@ -23,7 +27,33 @@
     <div class="stat-value" style="color: var(--accent);">{{ analytics.summary.total_lessons_used }}</div>
   </div>
 </div>
-
+<!-- Top 5 questions we could not answer -->
+<div class="card" style="margin-bottom: 2rem;">
+  <h3 class="card-title">Top 5 Questions We Could Not Answer</h3>
+  <p style="font-size: 0.85rem; color: var(--slate-500); margin-bottom: 1rem;">Questions sent to Pending most often in the last 30 days</p>
+  {% if analytics.top_unanswered %}
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Question</th>
+          <th>Times asked</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in analytics.top_unanswered %}
+        <tr>
+          <td>{{ item.question }}</td>
+          <td style="font-weight: 600;">{{ item.count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p style="color: var(--slate-400);">No unanswered questions in the last 30 days.</p>
+  {% endif %}
+</div>
 <!-- Charts Section -->
 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
   <!-- Good vs Bad Ratings Bar Chart -->
@@ -70,7 +100,7 @@
             <td>
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <div style="flex-grow: 1; background: var(--slate-200); height: 8px; border-radius: 4px; overflow: hidden; max-width: 100px;">
-                  <div style="background: var(--primary); width: {{ w.good_share_pct }}%; height: 100%;"></div>
+                  <progress value="{{ w.good_share_pct }}" max="100" aria-label="Quality share" style="width: 100%; height: 100%; accent-color: var(--primary);"></progress>
                 </div>
                 <span style="font-size: 0.85rem; font-weight: 600;">{{ w.good_share_pct }}%</span>
               </div>
@@ -89,8 +119,11 @@
   </div>
 </div>
 
+<script type="application/json" id="weekly-data">
+  {{ analytics.weekly_data | tojson }}
+</script>
 <script>
-  const weeklyData = {{ analytics.weekly_data | tojson }};
+  const weeklyData = JSON.parse(document.getElementById('weekly-data').textContent);
   const labels = weeklyData.map(d => d.week);
   const goodData = weeklyData.map(d => d.good);
   const badData = weeklyData.map(d => d.bad);

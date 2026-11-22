@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skin 3 - Login</title>
+<style>
+  :root{--bg:#0f172a;--primary:#f59e0b;--muted:#94a3b8;--ink:#f8fafc;}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;background:var(--bg);color:var(--ink);font-family:Arial,sans-serif}
+  .card{width:100%;max-width:420px;background:#1e293b;border:2px solid var(--primary);padding:1.5rem}
+  h1{font-family:Georgia,serif;color:var(--primary);margin:0 0 .25rem}
+  p{color:var(--muted);margin:0 0 1.5rem}
+  label{display:block;color:var(--primary);font-weight:bold;margin:.8rem 0 .3rem}
+  input{width:100%;min-height:44px;font-size:16px;background:#0b1220;border:1px solid #475569;color:var(--ink);padding:.7rem}
+  button{width:100%;min-height:48px;margin-top:1.25rem;background:var(--primary);border:0;color:#111827;font-size:1rem;font-weight:bold;padding:.7rem}
+  @media(min-width:768px){ .card{padding:2.5rem} }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Clinic sign in</h1>
+    <p>Staff access demo - Skin 3</p>
+    <form onsubmit="return false">
+      <label>Email address</label><input type="email" placeholder="admin@citycareclinic.com">
+      <label>Password</label><input type="password" placeholder="Password">
+      <button type="submit">Enter workspace</button>
+    </form>
+  </div>
+</body>
+</html>
