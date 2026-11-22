@@ -2,8 +2,8 @@ import logging
 from datetime import datetime, timedelta, timezone
 from html import escape
 from typing import Dict, Any
-from fastapi import APIRouter, Request, HTTPException, Form, Response, status
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi import APIRouter, Request, HTTPException, Form, Response, status  # pyright: ignore[reportMissingImports]
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse  # pyright: ignore[reportMissingImports]
 from app.config import settings
 from app.db import tenant_tx
 from app.validation import is_valid_email
@@ -45,12 +45,14 @@ def alert_clinic_urgent(clinic, session, clinic_id, question_id, question_text):
                 "<p>Please check the Pending page in your admin dashboard.</p>"
             ),
         })
+
+
 @router.post("/c/{slug}/session")
 async def create_session(request: Request, response: Response, slug: str, name: str = Form(...), email: str = Form(...)):
     clinic = resolve_clinic_by_slug(slug)
     name = name.strip()
     email = email.strip()
-    
+
     if not name or not is_valid_email(email):
         raise HTTPException(status_code=400, detail="Valid name and email are required.")
 
@@ -75,6 +77,7 @@ async def create_session(request: Request, response: Response, slug: str, name: 
         secure=settings.COOKIE_SECURE
     )
     return redirect
+
 
 @router.post("/c/{slug}/messages")
 async def handle_patient_message(request: Request, slug: str):
@@ -151,6 +154,7 @@ async def handle_patient_message(request: Request, slug: str):
         "kind": result["kind"],
         "source": result["source_title"]
     })
+
 
 @router.post("/c/{slug}/answers/{answer_id}/rating")
 async def submit_patient_rating(request: Request, slug: str, answer_id: str):
