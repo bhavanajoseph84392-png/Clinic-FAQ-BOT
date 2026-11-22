@@ -288,10 +288,11 @@ Update 9: Hindi and Telugu questions get answers in the patient's language, tran
 Update 12: Suggested question buttons appear when the chat opens, using each clinic's three most-asked non-urgent questions.
 Update 11: Staff can download masked Pending and Analytics data as CSV files from those pages.
 Update 8: After-hours questions get a reply promising the next opening time, and clinics get a morning digest of Pending questions.
+Update 13: A weekly Monday email gives each clinic bot answers, Pending count, urgent count and its top five unanswered questions.
 
 ## 7. Documentation
 - [Fix log](docs/fixes/INDEX.md)
 - [What broke and how I fixed it](docs/fixes/What_Broke_and_How_I_Fixed.pdf)
 - Interactive API documentation is at `/docs` when the app is running.
 - To embed the chatbot, copy the one-line script from `/admin/settings`; it loads `/embed.js`, which opens `/embed/{slug}` in an iframe scoped to that clinic.
-- Scheduled jobs: `python scripts/run_scheduled.py morning` sends the Pending digest; Render runs it via the `morning-digest` cron at 03:30 UTC (9:00 AM IST).
+- Scheduled jobs: `python scripts/run_scheduled.py morning` sends the Pending digest and `... weekly` sends the summary email; Render runs them via the `morning-digest` (03:30 UTC daily) and `weekly-summary` (03:30 UTC Monday) crons.

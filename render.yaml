@@ -68,3 +68,23 @@ jobs:
         sync: false
       - key: MAIL_FROM
         sync: false
+
+  - type: cron
+    name: weekly-summary
+    env: python
+    schedule: "30 3 * * 1"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/run_scheduled.py weekly
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: clinic-faq-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: EMAIL_PROVIDER
+        value: brevo
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
