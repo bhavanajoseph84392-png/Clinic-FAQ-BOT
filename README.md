@@ -44,6 +44,8 @@ Every tenant-scoped table contains `clinic_id uuid NOT NULL REFERENCES clinics(i
    - `webhook_url` (text)
    - `webhook_secret` (text)
    - `created_at` (timestamptz, NOT NULL DEFAULT now())
+   - `phone` (text)
+   - `emergency_number` (text)
 
 2. **`admin_users`**
    - `id` (uuid, PRIMARY KEY)
@@ -95,6 +97,8 @@ Every tenant-scoped table contains `clinic_id uuid NOT NULL REFERENCES clinics(i
    - `text` (text, NOT NULL)
    - `status` (text, NOT NULL CHECK ('answered', 'pending', 'resolved'))
    - `asked_at` (timestamptz, NOT NULL DEFAULT now())
+   - `is_urgent` (boolean NOT NULL DEFAULT false)
+   - `urgent_alerted_at` (timestamptz)
 
 7. **`answers`**
    - `id` (uuid, PRIMARY KEY)
@@ -225,6 +229,7 @@ Every tenant-scoped table contains `clinic_id uuid NOT NULL REFERENCES clinics(i
 ---
 
 ## 5. RAG Answer Pipeline & Safety Rules
+- **Urgent Symptom Check**: mentions_urgent_symptom() scans config/urgent_terms.txt. A match returns the emergency message built from clinics.phone without calling the model. Urgent questions are flagged, and the clinic gets at most one urgent email per chat session.
 1. **Budget Check**: If clinic daily AI budget (`DAILY_AI_BUDGET_PER_CLINIC`) is exceeded, trigger fallback immediately.
 2. **Intent Classification**: Gemini classifies input into `faq`, `medical`, `smalltalk`, `abuse`.
    - `medical`: Promptly triggers fallback ("Thank you! The clinic will reply to you soon by email.") and creates a Pending question.
@@ -263,6 +268,10 @@ pytest
 ---
 
 
+
+## Update Log
+Update 3: Urgent messages get an emergency reply, are flagged URGENT on the Pending page, and are sorted first. Clinics can set their phone and emergency number in Settings.
+Update 4: Pending page shows a one-line summary, a repeat count for identical questions, and a checkbox to save a staff reply as an FAQ item.
 
 ## 7. Documentation
 - [Fix log](docs/fixes/INDEX.md)
