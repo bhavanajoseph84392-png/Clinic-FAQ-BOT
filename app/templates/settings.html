@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Clinic Settings - {{ clinic.name }}{% endblock %}
+{% block header_title %}Clinic Settings{% endblock %}
+
+{% block content %}
+<div style="max-width: 640px; background: #fff; border-radius: 12px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+    <h2 style="margin-top: 0;">Emergency contact details</h2>
+    <p style="color: #64748b;">The clinic phone number appears in the emergency reply when a patient describes an urgent symptom.</p>
+
+    {% if saved %}
+    <div style="background:#dcfce7;color:#166534;padding:0.75rem 1rem;border-radius:8px;margin-bottom:1rem;">Settings saved.</div>
+    {% endif %}
+
+    <form method="post" action="/admin/settings">
+        <label style="display:block;font-weight:600;margin-bottom:0.25rem;">Clinic phone number</label>
+        <input type="text" name="phone" value="{{ phone or '' }}" placeholder="+91 99999 00000" maxlength="30"
+               style="width:100%;padding:0.6rem;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:1rem;box-sizing:border-box;">
+
+        <label style="display:block;font-weight:600;margin-bottom:0.25rem;">Emergency number (optional)</label>
+        <input type="text" name="emergency_number" value="{{ emergency_number or '' }}" placeholder="112" maxlength="20"
+               style="width:100%;padding:0.6rem;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:1.25rem;box-sizing:border-box;">
+
+        <button type="submit"
+                style="background:#0d9488;color:#fff;border:none;padding:0.7rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;">
+            Save settings
+        </button>
+    </form>
+</div>
+
+<div style="max-width: 640px; background: #fff; border-radius: 12px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-top: 1.5rem;">
+    <h2 style="margin-top: 0;">Embed on your website</h2>
+    <p style="color: #64748b;">Copy this one line and paste it into your website's HTML. It opens the chat in a frame that shows only your clinic's answers.</p>
+
+    <input type="text" id="embedScript" value="{{ embed_script }}" readonly
+           style="width:100%;padding:0.6rem;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:1rem;box-sizing:border-box;background:#f8fafc;font-family:monospace;font-size:0.8rem;">
+
+    <button type="button"
+            onclick="navigator.clipboard.writeText(document.getElementById('embedScript').value); this.textContent='Copied!';"
+            style="background:#0d9488;color:#fff;border:none;padding:0.7rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;">
+        Copy
+    </button>
+</div>
+{% endblock %}

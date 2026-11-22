@@ -20,6 +20,7 @@ from app.pending import get_pending_questions, reply_to_pending_question, add_re
 from app.learning import rate_answer, list_lessons, toggle_lesson, delete_lesson, ask_again, get_analytics
 from app.api_v1 import router as api_router, generate_clinic_api_key
 from app.chat import router as chat_router
+from app.embed import router as embed_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -46,13 +47,19 @@ templates = Jinja2Templates(directory="app/templates")
 # Mount API & Chat Routers
 app.include_router(api_router)
 app.include_router(chat_router)
+app.include_router(embed_router)
 
 # Security Headers Middleware
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    if re.fullmatch(r"/embed/[^/]+", request.url.path):
+        if "X-Frame-Options" in response.headers:
+            del response.headers["X-Frame-Options"]
+        response.headers["Content-Security-Policy"] = "frame-ancestors *"
+    else:
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
@@ -397,11 +404,16 @@ async def clinic_settings_page(request: Request, saved: str = "", admin: dict = 
         with conn.cursor() as cur:
             cur.execute("SELECT phone, emergency_number FROM clinics WHERE id = %s;", (clinic_id,))
             phone, emergency_number = cur.fetchone()
+    embed_script = (
+        f'<script src="{settings.APP_BASE_URL.rstrip("/")}/embed.js" '
+        f'data-clinic="{clinic["slug"]}" async></script>'
+    )
     return templates.TemplateResponse("settings.html", {
         "request": request,
         "clinic": clinic,
         "phone": phone,
         "emergency_number": emergency_number,
+        "embed_script": embed_script,
         "saved": saved == "1",
         "active_page": "settings",
     })
