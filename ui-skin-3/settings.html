@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skin 3 - Settings</title>
+<style>
+  :root{--bg:#0f172a;--panel:#1e293b;--primary:#f59e0b;--muted:#94a3b8;--ink:#f8fafc;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,sans-serif}
+  .top{background:var(--panel);border-bottom:2px solid var(--primary);padding:1rem}
+  .brand{font-family:Georgia,serif;color:var(--primary)}
+  .layout{display:block}
+  main{padding:1rem}
+  h1{font-family:Georgia,serif;color:var(--primary);margin:0 0 1rem}
+  .card{background:var(--panel);border:1px solid #334155;padding:1rem;margin-bottom:1rem}
+  label{display:block;color:var(--primary);font-weight:bold;margin:.8rem 0 .3rem}
+  input{width:100%;min-height:44px;font-size:16px;background:#0b1220;border:1px solid #475569;color:var(--ink);padding:.6rem}
+  input[readonly]{border-color:var(--primary);font-family:monospace;font-size:.8rem}
+  button{min-height:44px;background:var(--primary);border:0;color:#111827;font-weight:bold;padding:.6rem 1.2rem;margin-top:1rem}
+  @media(min-width:768px){
+    .layout{display:flex}
+    nav{width:240px;background:var(--panel);padding:1rem;display:flex;flex-direction:column;gap:.3rem;min-height:100vh;border-right:2px solid var(--primary)}
+    nav a{min-height:44px;display:flex;align-items:center;padding:.6rem;text-decoration:none;color:var(--ink)}
+    nav a:hover,nav a.active{background:#334155;color:var(--primary)}
+    main{flex:1;padding:2rem;max-width:900px}
+    .card{padding:1.5rem}
+  }
+</style>
+</head>
+<body>
+<div class="top"><span class="brand">City Care / Skin 3</span></div>
+<div class="layout">
+  <nav>
+    <a href="#">Dashboard</a><a href="#">Pending</a><a href="#">Analytics</a>
+    <a href="#">Answers</a><a href="#">Knowledge</a><a class="active" href="#">Settings</a>
+  </nav>
+  <main>
+    <h1>Clinic settings</h1>
+    <div class="card">
+      <h2>Emergency contact</h2>
+      <label>Clinic phone</label><input value="+91 88888 77777">
+      <label>Emergency number</label><input value="112">
+    </div>
+    <div class="card">
+      <h2>Opening hours (Asia/Kolkata)</h2>
+      <label>Opens</label><input type="time" value="08:30">
+      <label>Closes</label><input type="time" value="17:30">
+    </div>
+    <div class="card">
+      <h2>Website embed line</h2>
+      <p style="color:var(--muted)">Paste this single line into your clinic website.</p>
+      <input id="snippet" readonly value='&lt;script src="https://app.example.com/embed.js" data-clinic="city-care-clinic" async&gt;&lt;/script&gt;'>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('snippet').value); this.textContent='Copied!';">Copy</button>
+    </div>
+  </main>
+</div>
+</body>
+</html>

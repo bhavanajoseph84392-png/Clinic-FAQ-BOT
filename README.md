@@ -290,6 +290,7 @@ Update 11: Staff can download masked Pending and Analytics data as CSV files fro
 Update 8: After-hours questions get a reply promising the next opening time, and clinics get a morning digest of Pending questions.
 Update 13: A weekly Monday email gives each clinic bot answers, Pending count, urgent count and its top five unanswered questions.
 Update 14: Mobile-first layout with 768px and 1024px breakpoints, 44px buttons and scrollable tables.
+Update 15: Two static UI skins are available for interviews, separate from the live app.
 
 ## 7. Documentation
 - [Fix log](docs/fixes/INDEX.md)
@@ -297,3 +298,9 @@ Update 14: Mobile-first layout with 768px and 1024px breakpoints, 44px buttons a
 - Interactive API documentation is at `/docs` when the app is running.
 - To embed the chatbot, copy the one-line script from `/admin/settings`; it loads `/embed.js`, which opens `/embed/{slug}` in an iframe scoped to that clinic.
 - Scheduled jobs: `python scripts/run_scheduled.py morning` sends the Pending digest and `... weekly` sends the summary email; Render runs them via the `morning-digest` (03:30 UTC daily) and `weekly-summary` (03:30 UTC Monday) crons.
+
+## UI Skins
+The current app is Skin 1. Two static, front-end-only demo skins are included for interviews; they are not connected to the backend.
+
+- [Skin 2](ui-skin-2/index.html)
+- [Skin 3](ui-skin-3/index.html)
