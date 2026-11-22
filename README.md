@@ -270,6 +270,8 @@ pytest
 
 
 ## Update Log
+Update 1: Pending page shows how long each question has waited, turning red after 24 hours.
+Update 2: Analytics shows the top 5 unanswered questions.
 Update 3: Urgent messages get an emergency reply, are flagged URGENT on the Pending page, and are sorted first. Clinics can set their phone and emergency number in Settings.
 Update 4: Pending page shows a one-line summary, a repeat count for identical questions, and a checkbox to save a staff reply as an FAQ item.
 
