@@ -485,11 +485,7 @@ async def save_clinic_settings(
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
-                UPDATE clinics
-                SET phone = %s, emergency_number = %s, opening_time = %s, closing_time = %s
-                WHERE id = %s;
-                """,
+                "UPDATE clinics SET phone = %s, emergency_number = %s, opening_time = %s, closing_time = %s WHERE id = %s;",
                 (phone, emergency_number, parsed_opening, parsed_closing, clinic_id),
             )
     return RedirectResponse(url="/admin/settings?saved=1", status_code=status.HTTP_303_SEE_OTHER)
