@@ -21,6 +21,7 @@ from app.learning import rate_answer, list_lessons, toggle_lesson, delete_lesson
 from app.api_v1 import router as api_router, generate_clinic_api_key
 from app.chat import router as chat_router
 from app.embed import router as embed_router
+from app.privacy import mask_contacts
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -497,7 +498,7 @@ async def answers_page(request: Request, admin: dict = Depends(require_admin)):
                     "kind": r[2],
                     "source_title": r[3],
                     "created_at": r[4].strftime("%Y-%m-%d %H:%M") if r[4] else "",
-                    "question_text": r[5],
+                    "question_text": mask_contacts(r[5]),
                     "rating": r[6],
                     "patient_good": r[7],
                     "patient_bad": r[8]
@@ -558,7 +559,7 @@ async def ask_again_endpoint(request: Request, id: str, admin: dict = Depends(re
                     "kind": r[2],
                     "source_title": r[3],
                     "created_at": r[4].strftime("%Y-%m-%d %H:%M") if r[4] else "",
-                    "question_text": r[5],
+                    "question_text": mask_contacts(r[5]),
                     "rating": r[6],
                     "patient_good": r[7],
                     "patient_bad": r[8]

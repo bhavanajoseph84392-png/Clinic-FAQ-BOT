@@ -10,6 +10,7 @@ from app.validation import is_valid_email
 from app.auth import create_patient_token, PATIENT_COOKIE_NAME, PATIENT_SESSION_MAX_AGE
 from app.tenancy import resolve_clinic_by_slug, resolve_patient_session
 from app.rag import answer_question, FALLBACK_MESSAGE, mentions_urgent_symptom
+from app.privacy import mask_contacts
 from app.jobs import enqueue_job
 
 logger = logging.getLogger("clinic_faq.chat")
@@ -97,6 +98,8 @@ async def handle_patient_message(request: Request, slug: str):
     if not question_text:
         return JSONResponse(status_code=400, content={"error": "Question cannot be empty"})
 
+    stored_text = mask_contacts(question_text)
+
     # Run RAG pipeline
     result = answer_question(clinic_id, question_text)
     is_urgent = mentions_urgent_symptom(question_text)
@@ -110,7 +113,7 @@ async def handle_patient_message(request: Request, slug: str):
                 INSERT INTO questions (clinic_id, session_id, patient_name, patient_email, source, text, status, is_urgent)
                 VALUES (%s, %s, %s, %s, 'chat', %s, %s, %s)
                 RETURNING id;
-            """, (clinic_id, session["id"], session["name"], session["email"], question_text, question_status, is_urgent))
+            """, (clinic_id, session["id"], session["name"], session["email"], stored_text, question_status, is_urgent))
             question_id = cur.fetchone()[0]
 
             # Insert answer
@@ -133,7 +136,7 @@ async def handle_patient_message(request: Request, slug: str):
                 """, (clinic_id, result["lesson_id"], answer_id))
 
     if is_urgent:
-        alert_clinic_urgent(clinic, session, clinic_id, question_id, question_text)
+        alert_clinic_urgent(clinic, session, clinic_id, question_id, stored_text)
 
     # If fallback, notify clinic contact email
     if is_fallback and clinic.get("contact_email"):
@@ -142,7 +145,7 @@ async def handle_patient_message(request: Request, slug: str):
             "subject": f"New Pending Patient Question: {clinic['name']}",
             "html_body": f"""<p>A patient submitted a question that requires clinic attention:</p>
 <p><strong>Patient:</strong> {escape(session['name'])} ({escape(session['email'])})</p>
-<p><strong>Question:</strong> {escape(question_text)}</p>
+<p><strong>Question:</strong> {escape(stored_text)}</p>
 <p>Please log in to your clinic admin dashboard at /admin/pending to answer.</p>"""
         }
         enqueue_job(clinic_id, "send_email", notify_payload)

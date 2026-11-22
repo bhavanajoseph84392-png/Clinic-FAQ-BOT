@@ -3,6 +3,7 @@ from typing import Dict, Any, List, Optional
 from app.db import tenant_tx
 from app.jobs import enqueue_job
 from app.rag import answer_question
+from app.privacy import mask_contacts
 
 logger = logging.getLogger("clinic_faq.learning")
 
@@ -133,7 +134,7 @@ def ask_again(clinic_id: str, old_answer_id: str) -> Dict[str, Any]:
                 """, (clinic_id, new_result["lesson_id"], new_ans_id))
 
     return {
-        "question": q_text,
+        "question": mask_contacts(q_text),
         "old_answer": {
             "id": str(aid),
             "text": old_text,
@@ -153,7 +154,7 @@ def ask_again(clinic_id: str, old_answer_id: str) -> Dict[str, Any]:
 
 
 def format_top_unanswered(rows):
-    return [{"question": r[0], "count": r[1]} for r in rows]
+    return [{"question": mask_contacts(r[0]), "count": r[1]} for r in rows]
 
 
 def get_analytics(clinic_id: str) -> Dict[str, Any]:

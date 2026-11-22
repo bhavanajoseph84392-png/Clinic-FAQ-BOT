@@ -278,6 +278,7 @@ Update 4: Pending page shows a one-line summary, a repeat count for identical qu
 Update 5: Clinics can copy one script line from Settings to put the chatbot on their website, showing only their own answers.
 Update 6: Every bot answer now shows a Source line, falling back to "Clinic team" for escalations.
 Update 7: Locked knowledge items are returned word for word, without calling the model, and only for their own clinic.
+Update 10: Phone numbers and emails are masked before questions are stored and wherever staff see chat text.
 
 ## 7. Documentation
 - [Fix log](docs/fixes/INDEX.md)

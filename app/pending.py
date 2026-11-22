@@ -8,6 +8,7 @@ from app.db import tenant_tx
 from app.validation import is_valid_email
 from app.jobs import enqueue_job
 from app.emailer import send_email
+from app.privacy import mask_contacts
 
 logger = logging.getLogger("clinic_faq.pending")
 router = APIRouter(prefix="/admin/pending")
@@ -50,7 +51,7 @@ def get_pending_questions(clinic_id: str, status_filter: str = "pending") -> Lis
                     "id": str(r[0]),
                     "patient_name": r[1] or "Anonymous",
                     "patient_email": r[2] or "N/A",
-                    "text": r[3],
+                    "text": mask_contacts(r[3]),
                     "status": r[4],
                     "asked_at": r[5].strftime("%Y-%m-%d %H:%M:%S") if r[5] else "",
                     "hours_waiting": round((now - r[5]).total_seconds() / 3600, 1) if r[5] else 0,
@@ -61,7 +62,7 @@ def get_pending_questions(clinic_id: str, status_filter: str = "pending") -> Lis
                     "email_status": r[8],
                     "added_to_knowledge_item_id": str(r[9]) if r[9] else None,
                     "is_urgent": bool(r[10]),
-                    "summary": make_summary(r[3]),
+                    "summary": make_summary(mask_contacts(r[3])),
                     "times_asked": int(r[11]),
                 }
                 for r in rows
