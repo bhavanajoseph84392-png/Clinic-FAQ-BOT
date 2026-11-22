@@ -289,6 +289,7 @@ Update 12: Suggested question buttons appear when the chat opens, using each cli
 Update 11: Staff can download masked Pending and Analytics data as CSV files from those pages.
 Update 8: After-hours questions get a reply promising the next opening time, and clinics get a morning digest of Pending questions.
 Update 13: A weekly Monday email gives each clinic bot answers, Pending count, urgent count and its top five unanswered questions.
+Update 14: Mobile-first layout with 768px and 1024px breakpoints, 44px buttons and scrollable tables.
 
 ## 7. Documentation
 - [Fix log](docs/fixes/INDEX.md)
