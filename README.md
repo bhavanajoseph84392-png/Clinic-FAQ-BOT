@@ -282,6 +282,7 @@ Update 7: Locked knowledge items are returned word for word, without calling the
 Update 10: Phone numbers and emails are masked before questions are stored and wherever staff see chat text.
 Update 9: Hindi and Telugu questions get answers in the patient's language, translated from clinic text only; locked answers are never translated.
 Update 12: Suggested question buttons appear when the chat opens, using each clinic's three most-asked non-urgent questions.
+Update 11: Staff can download masked Pending and Analytics data as CSV files from those pages.
 
 ## 7. Documentation
 - [Fix log](docs/fixes/INDEX.md)

@@ -4,6 +4,10 @@
 {% block header_title %}Weekly Quality & Improvement Analytics{% endblock %}
 
 {% block content %}
+<div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+  <a href="/admin/analytics.csv" class="btn btn-secondary btn-sm">Download CSV</a>
+</div>
+
 <!-- Overview KPI Cards -->
 <div class="grid-cols-4">
   <div class="stat-card" style="border-top: 4px solid var(--success);">

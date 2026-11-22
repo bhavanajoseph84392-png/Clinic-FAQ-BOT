@@ -9,6 +9,7 @@
     <div style="display: flex; gap: 0.5rem;">
       <a href="/admin/pending?status=pending" class="btn {% if status_filter == 'pending' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">Pending Escalations</a>
       <a href="/admin/pending?status=resolved" class="btn {% if status_filter == 'resolved' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">Answered / Resolved</a>
+      <a href="/admin/pending.csv?status={{ status_filter }}" class="btn btn-secondary btn-sm">Download CSV</a>
     </div>
     <span style="font-size: 0.85rem; color: var(--slate-500);">Unanswerable or medical advice requests escalated automatically</span>
   </div>

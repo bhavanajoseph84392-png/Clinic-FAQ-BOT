@@ -1,5 +1,7 @@
 import re
 import os
+import csv
+import io
 from contextlib import asynccontextmanager
 from typing import Optional
 from fastapi import FastAPI, Request, Form, UploadFile, File, HTTPException, Depends, status, Response
@@ -401,6 +403,26 @@ async def pending_page(request: Request, status: str = "pending", admin: dict = 
         "status_filter": status,
         "active_page": "pending"
     })
+
+
+@app.get("/admin/pending.csv")
+async def pending_csv(status: str = "pending", admin: dict = Depends(require_admin)):
+    questions = get_pending_questions(admin["clinic_id"], status_filter=status)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Question", "Patient", "Email", "Status", "Asked At", "Repeat Count"])
+    for question in questions:
+        writer.writerow([
+            question["text"], question["patient_name"], question["patient_email"],
+            question["status"], question["asked_at"], question["times_asked"],
+        ])
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="pending.csv"'},
+    )
+
+
 @app.get("/admin/settings", response_class=HTMLResponse)
 async def clinic_settings_page(request: Request, saved: str = "", admin: dict = Depends(require_admin)):
     clinic = _get_admin_clinic(admin)
@@ -633,6 +655,24 @@ async def analytics_page(request: Request, admin: dict = Depends(require_admin))
         "analytics": data,
         "active_page": "analytics"
     })
+
+
+@app.get("/admin/analytics.csv")
+async def analytics_csv(admin: dict = Depends(require_admin)):
+    data = get_analytics(admin["clinic_id"])
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Section", "Label", "Value"])
+    for key, value in data["summary"].items():
+        writer.writerow(["Summary", key, value])
+    for item in data["top_unanswered"]:
+        writer.writerow(["Top unanswered", item["question"], item["count"]])
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="analytics.csv"'},
+    )
+
 
 # ----------------- API Keys & Webhooks -----------------
 
