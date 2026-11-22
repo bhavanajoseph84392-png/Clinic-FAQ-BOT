@@ -281,6 +281,7 @@ Update 6: Every bot answer now shows a Source line, falling back to "Clinic team
 Update 7: Locked knowledge items are returned word for word, without calling the model, and only for their own clinic.
 Update 10: Phone numbers and emails are masked before questions are stored and wherever staff see chat text.
 Update 9: Hindi and Telugu questions get answers in the patient's language, translated from clinic text only; locked answers are never translated.
+Update 12: Suggested question buttons appear when the chat opens, using each clinic's three most-asked non-urgent questions.
 
 ## 7. Documentation
 - [Fix log](docs/fixes/INDEX.md)

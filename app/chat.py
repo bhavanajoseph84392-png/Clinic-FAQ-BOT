@@ -80,6 +80,23 @@ async def create_session(request: Request, response: Response, slug: str, name: 
     return redirect
 
 
+@router.get("/c/{slug}/suggestions")
+async def get_suggestions(slug: str):
+    clinic = resolve_clinic_by_slug(slug)
+    with tenant_tx(clinic["id"]) as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT min(text), count(*)
+                FROM questions
+                WHERE clinic_id = %s AND is_urgent = false
+                GROUP BY lower(text)
+                ORDER BY count(*) DESC
+                LIMIT 3;
+            """, (clinic["id"],))
+            rows = cur.fetchall()
+    return {"suggestions": [mask_contacts(row[0]) for row in rows[:3] if row[0]]}
+
+
 @router.post("/c/{slug}/messages")
 async def handle_patient_message(request: Request, slug: str):
     clinic, session = resolve_patient_session(request, slug)

@@ -25,6 +25,8 @@
       </div>
     </div>
 
+    <div id="suggestionsBox" style="display:flex;flex-wrap:wrap;gap:0.5rem;padding:0.5rem 1rem;"></div>
+
     <form id="chatForm" class="chat-input-bar">
       <input type="text" id="questionInput" class="form-control" placeholder="Ask a question about our clinic..." autocomplete="off" required>
       <button type="submit" id="sendBtn" class="btn btn-primary" style="padding: 0.65rem 1.25rem;">Send</button>
@@ -94,9 +96,7 @@
       messagesBox.scrollTop = messagesBox.scrollHeight;
     }
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const question = input.value.trim();
+    async function sendQuestion(question) {
       if (!question) return;
 
       appendMessage(question, true);
@@ -132,7 +132,32 @@
         sendBtn.disabled = false;
         input.focus();
       }
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      sendQuestion(input.value.trim());
     });
+
+    async function loadSuggestions() {
+      try {
+        const response = await fetch(`/embed/${slug}/suggestions`);
+        if (!response.ok) return;
+        const data = await response.json();
+        const box = document.getElementById('suggestionsBox');
+        (data.suggestions || []).forEach((text) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'btn btn-secondary btn-sm';
+          button.textContent = text;
+          button.addEventListener('click', () => sendQuestion(text));
+          box.appendChild(button);
+        });
+      } catch (err) {
+        return;
+      }
+    }
+    loadSuggestions();
   </script>
 </body>
 </html>

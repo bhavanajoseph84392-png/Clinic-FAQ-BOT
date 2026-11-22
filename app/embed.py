@@ -10,7 +10,7 @@ from app.db import tenant_tx
 from app.validation import is_valid_email
 from app.auth import create_patient_token, PATIENT_COOKIE_NAME, PATIENT_SESSION_MAX_AGE
 from app.tenancy import resolve_clinic_by_slug, resolve_patient_session
-from app.chat import handle_patient_message, submit_patient_rating
+from app.chat import handle_patient_message, submit_patient_rating, get_suggestions
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -116,6 +116,11 @@ async def create_embed_session(
         secure=True,
     )
     return redirect
+
+
+@router.get("/embed/{slug}/suggestions")
+async def embed_suggestions(slug: str):
+    return await get_suggestions(slug)
 
 
 @router.post("/embed/{slug}/messages")
