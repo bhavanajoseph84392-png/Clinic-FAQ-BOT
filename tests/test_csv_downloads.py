@@ -1,8 +1,11 @@
 import asyncio
+import contextlib
 import csv
 import io
+from datetime import datetime, timezone
 
 import app.main
+import app.pending
 
 
 def _rows(response):
@@ -84,3 +87,47 @@ def test_two_clinic_csv_only_contains_own_questions(monkeypatch):
     assert "A secret question" in a_body
     assert "A secret question" not in b_body
     assert "B secret question" in b_body
+
+
+def test_pending_csv_masks_email(monkeypatch):
+    now = datetime.now(timezone.utc)
+    rows = [("q1", "Pat", "pat@gmail.com", "Where is parking?", "pending", now,
+             None, None, None, None, False, 1)]
+
+    def tenant_tx_for_clinic(_clinic_id):
+        class Cursor:
+            def execute(self, _sql, _params=None):
+                pass
+
+            def fetchall(self):
+                return rows
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        class Connection:
+            def cursor(self):
+                return Cursor()
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        @contextlib.contextmanager
+        def _tx(_clinic_id):
+            yield Connection()
+
+        return _tx(_clinic_id)
+
+    monkeypatch.setattr(app.pending, "tenant_tx", tenant_tx_for_clinic)
+
+    response = asyncio.run(app.main.pending_csv(admin={"clinic_id": "clinic-a"}))
+    body = response.body.decode("utf-8")
+
+    assert _rows(response)[1][2] == "p***@gmail.com"
+    assert "pat@gmail.com" not in body

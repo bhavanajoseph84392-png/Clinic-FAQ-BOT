@@ -38,7 +38,7 @@ def get_pending_questions(clinic_id: str, status_filter: str = "pending") -> Lis
                        r.reply_text, r.emailed_at, r.email_status, r.added_to_knowledge_item_id,
                        q.is_urgent,
                        (SELECT COUNT(*) FROM questions q2
-                        WHERE q2.clinic_id = q.clinic_id AND lower(q2.text) = lower(q.text)) AS times_asked
+                        WHERE q2.clinic_id = q.clinic_id AND q2.text = q.text) AS times_asked
                 FROM questions q
                 LEFT JOIN pending_replies r ON q.id = r.question_id
                 WHERE q.status = %s AND q.clinic_id = %s
@@ -50,7 +50,7 @@ def get_pending_questions(clinic_id: str, status_filter: str = "pending") -> Lis
                 {
                     "id": str(r[0]),
                     "patient_name": r[1] or "Anonymous",
-                    "patient_email": r[2] or "N/A",
+                    "patient_email": mask_contacts(r[2]) if r[2] else "N/A",
                     "text": mask_contacts(r[3]),
                     "status": r[4],
                     "asked_at": r[5].strftime("%Y-%m-%d %H:%M:%S") if r[5] else "",
