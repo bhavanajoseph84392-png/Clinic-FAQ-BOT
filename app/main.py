@@ -389,11 +389,56 @@ async def pending_page(request: Request, status: str = "pending", admin: dict = 
         "status_filter": status,
         "active_page": "pending"
     })
+@app.get("/admin/settings", response_class=HTMLResponse)
+async def clinic_settings_page(request: Request, saved: str = "", admin: dict = Depends(require_admin)):
+    clinic = _get_admin_clinic(admin)
+    clinic_id = clinic["id"]
+    with tenant_tx(clinic_id) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT phone, emergency_number FROM clinics WHERE id = %s;", (clinic_id,))
+            phone, emergency_number = cur.fetchone()
+    return templates.TemplateResponse("settings.html", {
+        "request": request,
+        "clinic": clinic,
+        "phone": phone,
+        "emergency_number": emergency_number,
+        "saved": saved == "1",
+        "active_page": "settings",
+    })
 
+
+@app.post("/admin/settings")
+async def save_clinic_settings(
+    phone: str = Form(""),
+    emergency_number: str = Form(""),
+    admin: dict = Depends(require_admin),
+):
+    clinic = _get_admin_clinic(admin)
+    clinic_id = clinic["id"]
+    phone = phone.strip() or None
+    emergency_number = emergency_number.strip() or None
+    if phone and len(phone) > 30:
+        raise HTTPException(status_code=400, detail="Phone number is too long.")
+    if emergency_number and len(emergency_number) > 20:
+        raise HTTPException(status_code=400, detail="Emergency number is too long.")
+    with tenant_tx(clinic_id) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE clinics SET phone = %s, emergency_number = %s WHERE id = %s;",
+                (phone, emergency_number, clinic_id),
+            )
+    return RedirectResponse(url="/admin/settings?saved=1", status_code=status.HTTP_303_SEE_OTHER)
 @app.post("/admin/pending/{id}/reply")
-async def reply_pending(id: str, reply_text: str = Form(...), admin: dict = Depends(require_admin)):
+async def reply_pending(
+    id: str,
+    reply_text: str = Form(...),
+    save_as_faq: str = Form(""),
+    admin: dict = Depends(require_admin),
+):
     clinic_id = admin["clinic_id"]
     reply_to_pending_question(clinic_id, id, reply_text)
+    if save_as_faq == "on":
+        add_reply_to_knowledge(clinic_id, id)
     return RedirectResponse(url="/admin/pending?status=resolved", status_code=status.HTTP_303_SEE_OTHER)
 
 @app.post("/admin/pending/{id}/to-knowledge")

@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timezone
 from html import escape
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from fastapi import APIRouter, HTTPException  # pyright: ignore[reportMissingImports]
 from app.auth import require_admin
 from app.db import tenant_tx
@@ -22,16 +22,26 @@ def format_wait(hours: float) -> str:
     return f"{days} day" if days == 1 else f"{days} days"
 
 
+def make_summary(text: str, limit: int = 120) -> str:
+    one_line = " ".join((text or "").split())
+    if len(one_line) <= limit:
+        return one_line
+    return one_line[: limit - 3].rstrip() + "..."
+
+
 def get_pending_questions(clinic_id: str, status_filter: str = "pending") -> List[Dict[str, Any]]:
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT q.id, q.patient_name, q.patient_email, q.text, q.status, q.asked_at,
-                       r.reply_text, r.emailed_at, r.email_status, r.added_to_knowledge_item_id
+                       r.reply_text, r.emailed_at, r.email_status, r.added_to_knowledge_item_id,
+                       q.is_urgent,
+                       (SELECT COUNT(*) FROM questions q2
+                        WHERE q2.clinic_id = q.clinic_id AND lower(q2.text) = lower(q.text)) AS times_asked
                 FROM questions q
                 LEFT JOIN pending_replies r ON q.id = r.question_id
                 WHERE q.status = %s AND q.clinic_id = %s
-                ORDER BY q.asked_at ASC;
+                ORDER BY q.is_urgent DESC, q.asked_at ASC;
             """, (status_filter, clinic_id))
             rows = cur.fetchall()
             now = datetime.now(timezone.utc)
@@ -49,7 +59,10 @@ def get_pending_questions(clinic_id: str, status_filter: str = "pending") -> Lis
                     "reply_text": r[6],
                     "emailed_at": r[7].strftime("%Y-%m-%d %H:%M:%S") if r[7] else None,
                     "email_status": r[8],
-                    "added_to_knowledge_item_id": str(r[9]) if r[9] else None
+                    "added_to_knowledge_item_id": str(r[9]) if r[9] else None,
+                    "is_urgent": bool(r[10]),
+                    "summary": make_summary(r[3]),
+                    "times_asked": int(r[11]),
                 }
                 for r in rows
             ]
