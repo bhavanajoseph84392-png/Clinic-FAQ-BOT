@@ -64,8 +64,9 @@ Every tenant-scoped table contains `clinic_id uuid NOT NULL REFERENCES clinics(i
    - `file_name` (text)
    - `status` (text, NOT NULL DEFAULT 'processing' CHECK ('processing', 'ready', 'failed'))
    - `error_message` (text)
-   - `source_question_id` (uuid)
-   - `created_at` (timestamptz, NOT NULL DEFAULT now())
+    - `source_question_id` (uuid)
+    - `is_locked` (boolean NOT NULL DEFAULT false)
+    - `created_at` (timestamptz, NOT NULL DEFAULT now())
    - `updated_at` (timestamptz, NOT NULL DEFAULT now())
 
 4. **`knowledge_chunks`**
@@ -276,6 +277,7 @@ Update 3: Urgent messages get an emergency reply, are flagged URGENT on the Pend
 Update 4: Pending page shows a one-line summary, a repeat count for identical questions, and a checkbox to save a staff reply as an FAQ item.
 Update 5: Clinics can copy one script line from Settings to put the chatbot on their website, showing only their own answers.
 Update 6: Every bot answer now shows a Source line, falling back to "Clinic team" for escalations.
+Update 7: Locked knowledge items are returned word for word, without calling the model, and only for their own clinic.
 
 ## 7. Documentation
 - [Fix log](docs/fixes/INDEX.md)

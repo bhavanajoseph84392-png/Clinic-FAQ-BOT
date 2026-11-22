@@ -52,6 +52,64 @@ def mentions_urgent_symptom(text: str) -> bool:
     return any(keyword in lowered for keyword in URGENT_SYMPTOM_KEYWORDS)
 
 
+_LOCKED_STOPWORDS = {
+    "what", "when", "where", "who", "why", "how", "is", "are", "am", "do", "does",
+    "did", "the", "a", "an", "your", "you", "we", "our", "i", "my", "to", "for",
+    "of", "and", "or", "in", "on", "at", "with", "can", "could", "would", "should",
+    "please", "tell", "me", "about", "have", "has", "it", "this", "that", "there",
+    "from", "be", "will", "clinic", "clinics", "doctor", "doctors", "hospital",
+    "patient", "patients", "service", "services", "health", "healthcare", "care",
+}
+
+
+def _match_tokens(text: str) -> set:
+    words = re.findall(r"[a-z0-9]+", (text or "").lower())
+    return {word for word in words if len(word) >= 3 and word not in _LOCKED_STOPWORDS}
+
+
+def find_locked_answer(clinic_id: str, question_text: str) -> Optional[Dict[str, Any]]:
+    """Returns the best matching locked knowledge item for this clinic, if any."""
+    try:
+        with tenant_tx(clinic_id) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, title, body
+                    FROM knowledge_items
+                    WHERE clinic_id = %s AND is_locked = true
+                      AND body IS NOT NULL AND body <> ''
+                    ORDER BY created_at DESC;
+                    """,
+                    (clinic_id,),
+                )
+                rows = cur.fetchall()
+    except Exception as exc:
+        logger.warning("Locked answer lookup failed for clinic %s: %s", clinic_id, exc)
+        return None
+
+    question_tokens = _match_tokens(question_text)
+    if not question_tokens:
+        return None
+
+    best_row = None
+    best_score = 0
+    for row in rows:
+        item_tokens = _match_tokens(f"{row[1] or ''} {row[2] or ''}")
+        score = len(question_tokens & item_tokens)
+        if score > best_score:
+            best_row = row
+            best_score = score
+
+    if not best_row:
+        return None
+
+    return {
+        "id": str(best_row[0]),
+        "title": best_row[1],
+        "body": best_row[2],
+    }
+
+
 def _check_daily_budget(clinic_id: str) -> bool:
     """Checks if clinic has exceeded DAILY_AI_BUDGET_PER_CLINIC for today."""
     with tenant_tx(clinic_id) as conn:
@@ -222,6 +280,20 @@ def answer_question(clinic_id: str, question_text: str) -> Dict[str, Any]:
     # Step 0: Urgent check comes first, so emergencies never reach the AI
     if mentions_urgent_symptom(question_text):
         return {**fallback_res, "answer": build_emergency_message(clinic_id)}
+
+    # Step 0a: Locked answers are returned exactly as stored, with no model call
+    locked = find_locked_answer(clinic_id, question_text)
+    if locked:
+        return {
+            "answer": locked["body"],
+            "kind": "manual",
+            "source_title": locked["title"],
+            "source_chunk_ids": [],
+            "lesson_id": None,
+            "confidence": 1.0,
+            "tokens_in": 0,
+            "tokens_out": 0,
+        }
 
     # Step 1: Budget Check
     if _check_daily_budget(clinic_id):

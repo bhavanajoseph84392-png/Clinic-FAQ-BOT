@@ -262,8 +262,8 @@ async def knowledge_list(request: Request, admin: dict = Depends(require_admin))
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT id, type, title, body, status, error_message, updated_at 
-                FROM knowledge_items 
+                SELECT id, type, title, body, status, error_message, updated_at, is_locked
+                FROM knowledge_items
                 WHERE clinic_id = %s
                 ORDER BY created_at DESC;
             """, (clinic_id,))
@@ -276,7 +276,8 @@ async def knowledge_list(request: Request, admin: dict = Depends(require_admin))
                     "body": r[3],
                     "status": r[4],
                     "error_message": r[5],
-                    "updated_at": r[6].strftime("%Y-%m-%d %H:%M") if r[6] else ""
+                    "updated_at": r[6].strftime("%Y-%m-%d %H:%M") if r[6] else "",
+                    "is_locked": bool(r[7])
                 }
                 for r in rows
             ]
@@ -292,16 +293,17 @@ async def knowledge_list(request: Request, admin: dict = Depends(require_admin))
 async def add_text_knowledge(
     title: str = Form(...),
     body: str = Form(...),
+    is_locked: str = Form(""),
     admin: dict = Depends(require_admin)
 ):
     clinic_id = admin["clinic_id"]
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO knowledge_items (clinic_id, type, title, body, status)
-                VALUES (%s, 'text', %s, %s, 'processing')
+                INSERT INTO knowledge_items (clinic_id, type, title, body, status, is_locked)
+                VALUES (%s, 'text', %s, %s, 'processing', %s)
                 RETURNING id;
-            """, (clinic_id, title.strip(), body.strip()))
+            """, (clinic_id, title.strip(), body.strip(), is_locked == "on"))
             item_id = cur.fetchone()[0]
 
     enqueue_job(clinic_id, "process_item", {"item_id": str(item_id)})
@@ -355,6 +357,7 @@ async def edit_knowledge(
     id: str,
     title: str = Form(...),
     body: str = Form(...),
+    is_locked: str = Form(""),
     admin: dict = Depends(require_admin)
 ):
     clinic_id = admin["clinic_id"]
@@ -362,10 +365,11 @@ async def edit_knowledge(
         with conn.cursor() as cur:
             cur.execute("""
                 UPDATE knowledge_items
-                SET title = %s, body = %s, status = 'processing', error_message = NULL, updated_at = now()
+                SET title = %s, body = %s, status = 'processing', error_message = NULL, updated_at = now(),
+                    is_locked = %s
                 WHERE id = %s AND clinic_id = %s
                 RETURNING id;
-            """, (title.strip(), body.strip(), id, clinic_id))
+            """, (title.strip(), body.strip(), is_locked == "on", id, clinic_id))
             if not cur.fetchone():
                 raise HTTPException(status_code=404, detail="Knowledge item not found")
 
