@@ -32,6 +32,32 @@ def _load_urgent_terms() -> tuple:
 
 URGENT_SYMPTOM_KEYWORDS = _load_urgent_terms()
 
+_LANGUAGE_INSTRUCTIONS = {
+    "Hindi": (
+        "\n\nReply in Hindi using Devanagari script. Translate the retrieved clinic text "
+        "into Hindi; add no facts or outside knowledge."
+    ),
+    "Telugu": (
+        "\n\nReply in Telugu using Telugu script. Translate the retrieved clinic text "
+        "into Telugu; add no facts or outside knowledge."
+    ),
+    "English": (
+        "\n\nReply in English using only the retrieved clinic text; add no facts or outside knowledge."
+    ),
+}
+
+
+def detect_language(text: str) -> str:
+    """Detects Devanagari (Hindi), Telugu or English from the patient's message."""
+    for char in text or "":
+        code = ord(char)
+        if 0x0900 <= code <= 0x097F:
+            return "Hindi"
+        if 0x0C00 <= code <= 0x0C7F:
+            return "Telugu"
+    return "English"
+
+
 EMERGENCY_BASE = (
     "This may be an emergency. Please call your local emergency number or go to the nearest hospital now."
 )
@@ -364,7 +390,9 @@ def answer_question(clinic_id: str, question_text: str) -> Dict[str, Any]:
     if lesson_hint:
         full_context += lesson_hint
 
+    language = detect_language(question_text)
     user_prompt = ANSWER_USER.format(context=full_context, question=question_text)
+    user_prompt += _LANGUAGE_INSTRUCTIONS[language]
     raw_answer = _call_gemini(
         system_instruction=ANSWER_SYSTEM,
         user_prompt=user_prompt,

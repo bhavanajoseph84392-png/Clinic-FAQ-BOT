@@ -240,6 +240,7 @@ Every tenant-scoped table contains `clinic_id uuid NOT NULL REFERENCES clinics(i
 4. **Hybrid Knowledge Retrieval**: Reciprocal Rank Fusion of vector cosine similarity (`pgvector`) and PostgreSQL full-text search (`tsvector`).
 5. **Threshold Verification**: If similarity < `KNOWLEDGE_THRESHOLD`, invoke fallback escalation.
 6. **Strict Grounding Check**: Gemini verifies that every fact, price, doctor name, and timing in the candidate answer is explicitly grounded in the retrieved chunks. If ungrounded, invoke fallback and create a Pending question.
+7. **Language Matching**: Devanagari (Hindi) and Telugu questions ask the model to translate the retrieved clinic text into that language without adding facts. Locked answers are returned as stored and are never translated.
 
 ---
 
@@ -279,6 +280,7 @@ Update 5: Clinics can copy one script line from Settings to put the chatbot on t
 Update 6: Every bot answer now shows a Source line, falling back to "Clinic team" for escalations.
 Update 7: Locked knowledge items are returned word for word, without calling the model, and only for their own clinic.
 Update 10: Phone numbers and emails are masked before questions are stored and wherever staff see chat text.
+Update 9: Hindi and Telugu questions get answers in the patient's language, translated from clinic text only; locked answers are never translated.
 
 ## 7. Documentation
 - [Fix log](docs/fixes/INDEX.md)
