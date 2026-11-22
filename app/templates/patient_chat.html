@@ -67,10 +67,10 @@
       bubble.className = isUser ? 'chat-bubble chat-bubble-user' : 'chat-bubble chat-bubble-bot';
       bubble.textContent = text;
       
-      if (!isUser && sourceTitle) {
+      if (!isUser) {
         const sourceSpan = document.createElement('div');
         sourceSpan.className = 'chat-source-tag';
-        sourceSpan.textContent = 'Source: ' + sourceTitle;
+        sourceSpan.textContent = 'Source: ' + (sourceTitle || 'Clinic team');
         bubble.appendChild(sourceSpan);
       }
 
@@ -128,11 +128,11 @@
           const data = await response.json();
           appendMessage(data.text, false, data.source, data.answer_id, data.kind);
         } else {
-          appendMessage("Thank you! The clinic will reply to you soon by email.", false, "Clinic Escalation");
+          appendMessage("Thank you! The clinic will reply to you soon by email.", false);
         }
       } catch (err) {
         loadingBubble.remove();
-        appendMessage("Thank you! The clinic will reply to you soon by email.", false, "Clinic Escalation");
+        appendMessage("Thank you! The clinic will reply to you soon by email.", false);
       } finally {
         sendBtn.disabled = false;
         input.focus();

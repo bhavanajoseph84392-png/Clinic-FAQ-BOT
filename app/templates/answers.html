@@ -25,14 +25,14 @@
       <div style="background: white; border: 1px solid var(--slate-300); border-radius: 0.5rem; padding: 1rem;">
         <span class="badge badge-bad" style="margin-bottom: 0.5rem;">Previous Answer</span>
         <p style="font-size: 0.95rem; color: var(--slate-800); margin-top: 0.5rem;">{{ side_by_side.old_answer.text }}</p>
-        <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 0.5rem;">Source: {{ side_by_side.old_answer.source_title or 'None' }}</div>
+        <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 0.5rem;">Source: {{ side_by_side.old_answer.source_title or 'Clinic team' }}</div>
       </div>
       <!-- New Answer -->
       <div style="background: var(--primary-light); border: 1px solid var(--primary-border); border-radius: 0.5rem; padding: 1rem;">
         <span class="badge badge-good" style="margin-bottom: 0.5rem;">New Re-evaluated Answer</span>
         <p style="font-size: 0.95rem; color: var(--slate-900); font-weight: 500; margin-top: 0.5rem;">{{ side_by_side.new_answer.text }}</p>
         <div style="font-size: 0.75rem; color: var(--primary-hover); margin-top: 0.5rem;">
-          Source: {{ side_by_side.new_answer.source_title }} 
+          Source: {{ side_by_side.new_answer.source_title or 'Clinic team' }} 
           {% if side_by_side.new_answer.lesson_used %}
           &bull; <strong>(Approved Lesson Contributed!)</strong>
           {% endif %}
@@ -66,7 +66,7 @@
           <strong style="color: var(--slate-500); font-size: 0.8rem; text-transform: uppercase;">Chatbot Answer:</strong>
           <p style="font-size: 0.95rem; color: var(--slate-800); margin-top: 0.25rem;">{{ item.text }}</p>
           <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 0.5rem;">
-            Source: <strong>{{ item.source_title or 'None' }}</strong> &bull; Generated: {{ item.created_at }}
+            Source: <strong>{{ item.source_title or 'Clinic team' }}</strong> &bull; Generated: {{ item.created_at }}
           </div>
         </div>
 

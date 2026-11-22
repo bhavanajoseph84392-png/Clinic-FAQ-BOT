@@ -275,6 +275,7 @@ Update 2: Analytics shows the top 5 unanswered questions.
 Update 3: Urgent messages get an emergency reply, are flagged URGENT on the Pending page, and are sorted first. Clinics can set their phone and emergency number in Settings.
 Update 4: Pending page shows a one-line summary, a repeat count for identical questions, and a checkbox to save a staff reply as an FAQ item.
 Update 5: Clinics can copy one script line from Settings to put the chatbot on their website, showing only their own answers.
+Update 6: Every bot answer now shows a Source line, falling back to "Clinic team" for escalations.
 
 ## 7. Documentation
 - [Fix log](docs/fixes/INDEX.md)
