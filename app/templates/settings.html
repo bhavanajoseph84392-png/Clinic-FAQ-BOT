@@ -21,6 +21,16 @@
         <input type="text" name="emergency_number" value="{{ emergency_number or '' }}" placeholder="112" maxlength="20"
                style="width:100%;padding:0.6rem;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:1.25rem;box-sizing:border-box;">
 
+        <h2 style="margin-top: 0; font-size: 1.1rem;">Opening hours</h2>
+        <p style="color: #64748b; margin-bottom: 0.75rem;">Times are in Asia/Kolkata</p>
+        <label style="display:block;font-weight:600;margin-bottom:0.25rem;">Opening time</label>
+        <input type="time" name="opening_time" value="{{ opening_time or '' }}"
+               style="width:100%;padding:0.6rem;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:1rem;box-sizing:border-box;">
+
+        <label style="display:block;font-weight:600;margin-bottom:0.25rem;">Closing time</label>
+        <input type="time" name="closing_time" value="{{ closing_time or '' }}"
+               style="width:100%;padding:0.6rem;border:1px solid #cbd5e1;border-radius:8px;margin-bottom:1.25rem;box-sizing:border-box;">
+
         <button type="submit"
                 style="background:#0d9488;color:#fff;border:none;padding:0.7rem 1.25rem;border-radius:8px;font-weight:600;cursor:pointer;">
             Save settings

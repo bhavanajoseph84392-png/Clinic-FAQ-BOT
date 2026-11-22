@@ -2,6 +2,7 @@ import re
 import os
 import csv
 import io
+from datetime import datetime
 from contextlib import asynccontextmanager
 from typing import Optional
 from fastapi import FastAPI, Request, Form, UploadFile, File, HTTPException, Depends, status, Response
@@ -429,8 +430,11 @@ async def clinic_settings_page(request: Request, saved: str = "", admin: dict = 
     clinic_id = clinic["id"]
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT phone, emergency_number FROM clinics WHERE id = %s;", (clinic_id,))
-            phone, emergency_number = cur.fetchone()
+            cur.execute(
+                "SELECT phone, emergency_number, opening_time, closing_time FROM clinics WHERE id = %s;",
+                (clinic_id,),
+            )
+            phone, emergency_number, opening_time, closing_time = cur.fetchone()
     embed_script = (
         f'<script src="{settings.APP_BASE_URL.rstrip("/")}/embed.js" '
         f'data-clinic="{clinic["slug"]}" async></script>'
@@ -440,6 +444,8 @@ async def clinic_settings_page(request: Request, saved: str = "", admin: dict = 
         "clinic": clinic,
         "phone": phone,
         "emergency_number": emergency_number,
+        "opening_time": opening_time.strftime("%H:%M") if opening_time else "",
+        "closing_time": closing_time.strftime("%H:%M") if closing_time else "",
         "embed_script": embed_script,
         "saved": saved == "1",
         "active_page": "settings",
@@ -450,6 +456,8 @@ async def clinic_settings_page(request: Request, saved: str = "", admin: dict = 
 async def save_clinic_settings(
     phone: str = Form(""),
     emergency_number: str = Form(""),
+    opening_time: str = Form(""),
+    closing_time: str = Form(""),
     admin: dict = Depends(require_admin),
 ):
     clinic = _get_admin_clinic(admin)
@@ -460,11 +468,29 @@ async def save_clinic_settings(
         raise HTTPException(status_code=400, detail="Phone number is too long.")
     if emergency_number and len(emergency_number) > 20:
         raise HTTPException(status_code=400, detail="Emergency number is too long.")
+
+    parsed_opening = None
+    parsed_closing = None
+    if opening_time:
+        try:
+            parsed_opening = datetime.strptime(opening_time, "%H:%M").time()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Opening time must be in HH:MM format.")
+    if closing_time:
+        try:
+            parsed_closing = datetime.strptime(closing_time, "%H:%M").time()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Closing time must be in HH:MM format.")
+
     with tenant_tx(clinic_id) as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "UPDATE clinics SET phone = %s, emergency_number = %s WHERE id = %s;",
-                (phone, emergency_number, clinic_id),
+                """
+                UPDATE clinics
+                SET phone = %s, emergency_number = %s, opening_time = %s, closing_time = %s
+                WHERE id = %s;
+                """,
+                (phone, emergency_number, parsed_opening, parsed_closing, clinic_id),
             )
     return RedirectResponse(url="/admin/settings?saved=1", status_code=status.HTTP_303_SEE_OTHER)
 @app.post("/admin/pending/{id}/reply")

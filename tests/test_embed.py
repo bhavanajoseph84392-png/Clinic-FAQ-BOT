@@ -51,7 +51,7 @@ class FakeConnection:
 
 @contextlib.contextmanager
 def fake_tenant_tx(_clinic_id):
-    yield FakeConnection(("+1 555 0100", "112"))
+    yield FakeConnection(("+1 555 0100", "112", None, None))
 
 
 def _clinic(slug):

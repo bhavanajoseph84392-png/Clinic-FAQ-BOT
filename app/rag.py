@@ -1,7 +1,9 @@
 import re
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import httpx
 
@@ -134,6 +136,46 @@ def find_locked_answer(clinic_id: str, question_text: str) -> Optional[Dict[str,
         "title": best_row[1],
         "body": best_row[2],
     }
+
+
+def _format_opening_time(value) -> str:
+    suffix = "AM" if value.hour < 12 else "PM"
+    hour = value.hour % 12 or 12
+    if value.minute:
+        return f"{hour}:{value.minute:02d} {suffix}"
+    return f"{hour} {suffix}"
+
+
+def after_hours_message(clinic_id: str) -> Optional[str]:
+    """Returns the after-hours Pending reply when the clinic is closed."""
+    try:
+        with tenant_tx(clinic_id) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT opening_time, closing_time, timezone FROM clinics WHERE id = %s;",
+                    (clinic_id,),
+                )
+                row = cur.fetchone()
+    except Exception as exc:
+        logger.warning("After-hours lookup failed for clinic %s: %s", clinic_id, exc)
+        return None
+
+    if not row or not row[0] or not row[1] or row[0] >= row[1]:
+        return None
+
+    try:
+        tz = ZoneInfo(row[2] or "Asia/Kolkata")
+    except (ZoneInfoNotFoundError, ValueError):
+        tz = ZoneInfo("Asia/Kolkata")
+
+    now = datetime.now(timezone.utc).astimezone(tz).time()
+    if row[0] <= now <= row[1]:
+        return None
+
+    label = _format_opening_time(row[0])
+    if now < row[0]:
+        return f"We will reply today after {label}."
+    return f"We will reply tomorrow after {label}."
 
 
 def _check_daily_budget(clinic_id: str) -> bool:
@@ -302,6 +344,10 @@ def answer_question(clinic_id: str, question_text: str) -> Dict[str, Any]:
         "tokens_in": 0,
         "tokens_out": 0
     }
+
+    closed_reply = after_hours_message(clinic_id)
+    if closed_reply:
+        fallback_res["answer"] = closed_reply
 
     # Step 0: Urgent check comes first, so emergencies never reach the AI
     if mentions_urgent_symptom(question_text):
