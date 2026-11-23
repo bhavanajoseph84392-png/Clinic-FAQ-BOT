@@ -293,8 +293,7 @@ Update 14: Mobile-first layout with 768px and 1024px breakpoints, 44px buttons a
 Update 15: Two static UI skins are available for interviews, separate from the live app.
 
 ## 7. Documentation
-- [Fix log](docs/fixes/INDEX.md)
-- [What broke and how I fixed it](docs/fixes/What_Broke_and_How_I_Fixed.pdf)
+- [What broke and how I fixed it](docs/fixes/What_Broke_and_How_I_Fixed.md)
 - Interactive API documentation is at `/docs` when the app is running.
 - To embed the chatbot, copy the one-line script from `/admin/settings`; it loads `/embed.js`, which opens `/embed/{slug}` in an iframe scoped to that clinic.
 - Scheduled jobs: `python scripts/run_scheduled.py morning` sends the Pending digest and `... weekly` sends the summary email; Render runs them via the `morning-digest` (03:30 UTC daily) and `weekly-summary` (03:30 UTC Monday) crons.
