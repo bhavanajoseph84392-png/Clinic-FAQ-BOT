@@ -300,6 +300,5 @@ Update 15: Two static UI skins are available for interviews, separate from the l
 
 ## UI Skins
 The current app is Skin 1. Two static, front-end-only demo skins are included for interviews; they are not connected to the backend.
-
 - [Skin 2](ui-skin-2/index.html)
 - [Skin 3](ui-skin-3/index.html)
